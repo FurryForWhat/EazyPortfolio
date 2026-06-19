@@ -42,7 +42,7 @@ Use the Write tool to overwrite `projects.json` with the merged result, pretty-p
 ## 5. Commit and push
 
 ```bash
-git add projects.json
+git add -f projects.json
 git commit -m "Update portfolio data ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
 git push
 ```
