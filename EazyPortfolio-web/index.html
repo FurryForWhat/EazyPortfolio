@@ -204,6 +204,76 @@
 
     .project__repo-link:hover { color: var(--text); }
 
+    /* Status badge */
+    .project__status {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.12rem 0.5rem;
+      border-radius: 3px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+      letter-spacing: 0.02em;
+    }
+    .project__status--in_progress {
+      background: rgba(79, 110, 246, 0.15);
+      color: var(--accent);
+    }
+    .project__status--completed {
+      background: rgba(99, 216, 140, 0.1);
+      color: #63d88c;
+    }
+    .project__status--archived {
+      background: var(--tag-bg);
+      color: #4a4e65;
+    }
+
+    /* Challenge / Resolution block — the page's signature element */
+    .challenge-resolve {
+      background: rgba(255, 255, 255, 0.015);
+      border-left: 2px solid var(--border);
+      padding: 0.8rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .challenge-resolve__item {
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    .challenge-resolve__item + .challenge-resolve__item {
+      margin-top: 0.6rem;
+    }
+    .challenge-resolve__label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 0.15rem;
+    }
+
+    /* Per-project last-updated timestamp */
+    .project__last-updated {
+      font-size: 0.72rem;
+      color: var(--muted);
+      opacity: 0.45;
+      margin-left: auto;
+    }
+
+    /* Evidence marker for readme_only entries */
+    .evidence-marker {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      opacity: 0.25;
+      margin-left: 0.4rem;
+      cursor: help;
+      vertical-align: middle;
+    }
+
     /* States */
     .state {
       padding: 4rem 0;
@@ -307,8 +377,8 @@
       const h = Math.floor(m / 60);
       if (h < 24)  return `${h} hour${h > 1 ? 's' : ''} ago`;
       const d = Math.floor(h / 24);
-      if (d < 30)  return `${d} day${d > 1 ? 's' : ''} ago`;
-      const mo = Math.floor(d / 30);
+      if (d < 31)  return `${d} day${d > 1 ? 's' : ''} ago`;
+      const mo = Math.floor(d / 30.44);
       if (mo < 12) return `${mo} month${mo > 1 ? 's' : ''} ago`;
       return `${Math.floor(mo / 12)} year${Math.floor(mo / 12) > 1 ? 's' : ''} ago`;
     }
@@ -334,9 +404,35 @@
         .map(t => `<span class="tag">${t}</span>`)
         .join('');
 
+      const statusLabel = { in_progress: 'active', completed: 'done', archived: 'archived' }[p.status] || '';
+      const statusBadge = statusLabel
+        ? `<span class="project__status project__status--${p.status}">${statusLabel}</span>`
+        : '';
+
+      const evidenceMarker = p.evidence_level === 'readme_only'
+        ? `<span class="evidence-marker" title="Limited commit history — based on README only"></span>`
+        : '';
+
+      const challengeBlock = (p.problem_solved || p.how_i_solved_it)
+        ? `<div class="challenge-resolve">
+            ${p.problem_solved ? `<div class="challenge-resolve__item">
+              <div class="challenge-resolve__label">Challenge</div>
+              <div>${p.problem_solved}</div>
+            </div>` : ''}
+            ${p.how_i_solved_it ? `<div class="challenge-resolve__item">
+              <div class="challenge-resolve__label">Resolution</div>
+              <div>${p.how_i_solved_it}</div>
+            </div>` : ''}
+           </div>`
+        : '';
+
+      const lastUpdated = p.last_updated
+        ? `<span class="project__last-updated">updated ${relativeTime(p.last_updated)}</span>`
+        : '';
+
       const caseStudyLink = p.demo_url
         ? `<a href="${p.demo_url}" target="_blank" rel="noopener" class="project__case-study">
-             VIEW CASE STUDY
+             View demo
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
            </a>`
         : '';
@@ -344,12 +440,14 @@
       el.innerHTML = `
         <div class="project__thumb">${thumbInitial(p.title)}</div>
         <div class="project__body">
-          <a href="${p.repo_url}" target="_blank" rel="noopener" class="project__title">${p.title}</a>
+          <a href="${p.repo_url}" target="_blank" rel="noopener" class="project__title">${p.title}</a>${statusBadge}${evidenceMarker}
           <p class="project__summary">${p.summary}</p>
           <div class="project__tags">${tags}</div>
+          ${challengeBlock}
           <div class="project__actions">
             ${caseStudyLink}
             <a href="${p.repo_url}" target="_blank" rel="noopener" class="project__repo-link">View on GitHub ↗</a>
+            ${lastUpdated}
           </div>
         </div>
       `;

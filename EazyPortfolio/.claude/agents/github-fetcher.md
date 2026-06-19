@@ -26,6 +26,7 @@ If the clone fails, stop and return `{"error": "clone_failed", "repo": "<name>",
 git log -1 --format=%cI            # last commit date -> last_updated
 git log --reverse --format=%cI | head -1   # first commit date -> created proxy
 git rev-list --count HEAD          # total commit count
+git shortlog -sn --all --no-merges # contributor list with commit counts
 ```
 
 If total commit count is below 10, you will later set `evidence_level` to `readme_only` rather than attempt hotspot analysis on too little history — but still run step 3, it's harmless even on small repos.
@@ -72,7 +73,11 @@ Return exactly this JSON and nothing else (no markdown fences, no commentary):
     "name": "repo-name",
     "url": "https://github.com/owner/repo-name",
     "last_updated": "2026-06-10T00:00:00Z",
-    "total_commits": 47
+    "total_commits": 47,
+    "contributors": [
+      {"name": "FurryForWhat", "commits": 32},
+      {"name": "other-dev", "commits": 15}
+    ]
   },
   "readme_content": "raw README text, or empty string",
   "hotspot_files": [
