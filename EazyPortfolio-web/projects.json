@@ -17,7 +17,7 @@
     {
       "id": "cross-border-exchange",
       "title": "Cross-Border Exchange Platform",
-      "repo_url": "https://github.com/furry/cross-border-exchange",
+      "repo_url": "https://github.com/FurryForWhat/cross-border-exchange",
       "summary": "A B2B platform connecting Thai suppliers with Myanmar buyers, handling catalog, orders, payments, and logistics across two currencies.",
       "tech_stack": ["Java 21", "Spring Boot 3", "PostgreSQL", "JWT"],
       "problem_solved": "Currency handling between THB and MMK required precise minor-unit arithmetic that kept producing rounding errors across service boundaries.",
