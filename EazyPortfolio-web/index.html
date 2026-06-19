@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Furry · Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:         #0B0F19;
+      --surface:    #111827;
+      --border:     #1F2937;
+      --text:       #F1F5F9;
+      --muted:      #94A3B8;
+      --accent:     #C084FC;
+      --ch:         #F97316;
+      --res:        #34D399;
+      --radius:     10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ─────────────────────────────── */
+    .site {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ── Hero ───────────────────────────────── */
+    .hero {
+      padding: 5rem 0 3.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero__eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .hero__name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .hero__tagline {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 480px;
+    }
+
+    /* ── Projects list ──────────────────────── */
+    .projects {
+      padding: 3.5rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    /* ── Project entry ──────────────────────── */
+    .project {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 2rem;
+      transition: border-color 0.2s;
+    }
+    .project:hover { border-color: #374151; }
+
+    .project__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .project__title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .project__title:hover { color: var(--accent); }
+
+    .project__status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .project__status--in_progress {
+      background: rgba(192, 132, 252, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(192, 132, 252, 0.3);
+    }
+    .project__status--completed {
+      background: rgba(52, 211, 153, 0.08);
+      color: var(--res);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .project__status--archived {
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .project__summary {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Signature element: CH / RES split ─── */
+    .evidence {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .evidence__cell {
+      background: #0d1420;
+      padding: 1rem 1.25rem;
+    }
+
+    .evidence__label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .evidence__label--ch  { color: var(--ch); }
+    .evidence__label--res { color: var(--res); }
+
+    .evidence__text {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .evidence__badge {
+      display: inline-block;
+      margin-top: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    /* ── Footer row ─────────────────────────── */
+    .project__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .tech-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      padding: 0.2rem 0.55rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+    }
+
+    .project__meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+
+    .project__time {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .project__links {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .link-btn {
+      font-size: 0.82rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      padding: 0.3rem 0.75rem;
+      border-radius: 6px;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .link-btn:hover {
+      color: var(--text);
+      border-color: #374151;
+    }
+    .link-btn--primary {
+      border-color: rgba(192,132,252,0.35);
+      color: var(--accent);
+    }
+    .link-btn--primary:hover {
+      background: rgba(192,132,252,0.08);
+      border-color: var(--accent);
+    }
+
+    /* ── States ─────────────────────────────── */
+    .state {
+      padding: 5rem 0;
+      text-align: center;
+      color: var(--muted);
+    }
+    .state__icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      opacity: 0.4;
+    }
+    .state__heading {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .state__retry {
+      margin-top: 1.25rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .state__retry:hover { border-color: #374151; color: var(--text); }
+
+    /* ── Site footer ─────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .site-footer__sync {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    .site-footer__credit {
+      font-size: 0.82rem;
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    /* ── Fade-in animation ───────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .project {
+      animation: fadeUp 0.35s ease both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .project { animation: none; }
+    }
+
+    /* ── Responsive ──────────────────────────── */
+    @media (max-width: 560px) {
+      .evidence { grid-template-columns: 1fr; }
+      .project__header { flex-direction: column; align-items: flex-start; }
+      .project__footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="site">
+    <header class="hero">
+      <p class="hero__eyebrow">// portfolio</p>
+      <h1 class="hero__name">Furry33</h1>
+      <p class="hero__tagline">I build things. Commits don't lie — here's what actually happened.</p>
+    </header>
+
+    <main id="projects-root" class="projects">
+      <!-- injected by JS -->
+    </main>
+
+    <footer class="site-footer">
+      <span class="site-footer__sync" id="sync-label"></span>
+      <span class="site-footer__credit">auto-synced via pushfolio</span>
+    </footer>
+  </div>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────
+    function relativeTime(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1)   return 'just now';
+      if (m < 60)  return `${m} minute${m > 1 ? 's' : ''} ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24)  return `${h} hour${h > 1 ? 's' : ''} ago`;
+      const d = Math.floor(h / 24);
+      if (d < 30)  return `${d} day${d > 1 ? 's' : ''} ago`;
+      const mo = Math.floor(d / 30);
+      if (mo < 12) return `${mo} month${mo > 1 ? 's' : ''} ago`;
+      return `${Math.floor(mo / 12)} year${Math.floor(mo / 12) > 1 ? 's' : ''} ago`;
+    }
+
+    function statusLabel(s) {
+      return { in_progress: 'in progress', completed: 'completed', archived: 'archived' }[s] || s;
+    }
+
+    // ── Renderers ────────────────────────────────────────────
+    function renderProject(p, index) {
+      const el = document.createElement('article');
+      el.className = 'project';
+      el.style.animationDelay = `${index * 60}ms`;
+
+      const pills = (p.tech_stack || [])
+        .map(t => `<span class="tech-pill">${t}</span>`)
+        .join('');
+
+      const evidenceBadge = p.evidence_level === 'readme_only'
+        ? `<span class="evidence__badge" title="Summarized from README — not enough commit history yet">· readme only</span>`
+        : '';
+
+      const demoLink = p.demo_url
+        ? `<a href="${p.demo_url}" target="_blank" rel="noopener" class="link-btn link-btn--primary">View demo</a>`
+        : '';
+
+      el.innerHTML = `
+        <div class="project__header">
+          <a href="${p.repo_url}" target="_blank" rel="noopener" class="project__title">${p.title}</a>
+          <span class="project__status project__status--${p.status}">${statusLabel(p.status)}</span>
+        </div>
+        <p class="project__summary">${p.summary}</p>
+        <div class="evidence">
+          <div class="evidence__cell">
+            <p class="evidence__label evidence__label--ch">CH:</p>
+            <p class="evidence__text">${p.problem_solved}</p>
+            ${evidenceBadge}
+          </div>
+          <div class="evidence__cell">
+            <p class="evidence__label evidence__label--res">RES:</p>
+            <p class="evidence__text">${p.how_i_solved_it}</p>
+          </div>
+        </div>
+        <div class="project__footer">
+          <div class="tech-stack">${pills}</div>
+          <div class="project__meta">
+            <span class="project__time">${relativeTime(p.last_updated)}</span>
+            <div class="project__links">
+              <a href="${p.repo_url}" target="_blank" rel="noopener" class="link-btn">GitHub ↗</a>
+              ${demoLink}
+            </div>
+          </div>
+        </div>
+      `;
+      return el;
+    }
+
+    function renderLoading(root) {
+      root.innerHTML = `
+        <div class="state">
+          <div class="state__icon">⋯</div>
+          <p class="state__heading">Loading projects</p>
+        </div>`;
+    }
+
+    function renderError(root) {
+      root.innerHTML = `
+        <div class="state">
+          <div class="state__icon">◌</div>
+          <p class="state__heading">Couldn't load projects</p>
+          <p>projects.json wasn't found or couldn't be read.</p>
+          <button class="state__retry" onclick="loadProjects()">Try again</button>
+        </div>`;
+    }
+
+    function renderEmpty(root) {
+      root.innerHTML = `
+        <div class="state">
+          <div class="state__icon">□</div>
+          <p class="state__heading">No projects yet</p>
+          <p>Run <code>/update-portfolio</code> to sync your repos.</p>
+        </div>`;
+    }
+
+    // ── Sort ─────────────────────────────────────────────────
+    function sortProjects(projects) {
+      return [...projects].sort((a, b) => {
+        if (a.status === 'in_progress' && b.status !== 'in_progress') return -1;
+        if (b.status === 'in_progress' && a.status !== 'in_progress') return  1;
+        return new Date(b.last_updated) - new Date(a.last_updated);
+      });
+    }
+
+    // ── Main ─────────────────────────────────────────────────
+    async function loadProjects() {
+      const root = document.getElementById('projects-root');
+      const syncLabel = document.getElementById('sync-label');
+
+      renderLoading(root);
+
+      try {
+        const res = await fetch('./projects.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const projects = sortProjects(data.projects || []);
+
+        if (projects.length === 0) {
+          renderEmpty(root);
+          return;
+        }
+
+        root.innerHTML = '';
+        projects.forEach((p, i) => root.appendChild(renderProject(p, i)));
+
+        if (data.last_synced) {
+          syncLabel.textContent = `last synced ${relativeTime(data.last_synced)}`;
+        }
+
+      } catch (err) {
+        console.error('Portfolio fetch failed:', err);
+        renderError(root);
+      }
+    }
+
+    loadProjects();
+  </script>
+</body>
+</html>

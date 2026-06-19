@@ -1,0 +1,31 @@
+{
+  "last_synced": "2026-06-19T10:00:00Z",
+  "projects": [
+    {
+      "id": "pushfolio",
+      "title": "Pushfolio",
+      "repo_url": "https://github.com/FurryForWhat/EazyPortfolio",
+      "summary": "An AI agent pipeline that reads GitHub commit history and auto-publishes structured project summaries to a personal portfolio page.",
+      "tech_stack": ["Claude Code", "GitHub MCP", "Node.js", "Vercel"],
+      "problem_solved": "Commit history contains real problem-solving evidence but no tool surfaces it in a readable narrative form.",
+      "how_i_solved_it": "Built a three-subagent pipeline — fetcher, analyzer, publisher — where hotspot files (highest commit count) drive the 'challenge' narrative rather than README alone.",
+      "status": "in_progress",
+      "last_updated": "2026-06-19T08:00:00Z",
+      "demo_url": null,
+      "evidence_level": "commit_history"
+    },
+    {
+      "id": "cross-border-exchange",
+      "title": "Cross-Border Exchange Platform",
+      "repo_url": "https://github.com/furry/cross-border-exchange",
+      "summary": "A B2B platform connecting Thai suppliers with Myanmar buyers, handling catalog, orders, payments, and logistics across two currencies.",
+      "tech_stack": ["Java 21", "Spring Boot 3", "PostgreSQL", "JWT"],
+      "problem_solved": "Currency handling between THB and MMK required precise minor-unit arithmetic that kept producing rounding errors across service boundaries.",
+      "how_i_solved_it": "Introduced a dedicated Money value object with explicit minor-unit conversion logic, eliminating implicit float arithmetic across the payment flow.",
+      "status": "in_progress",
+      "last_updated": "2026-06-10T00:00:00Z",
+      "demo_url": null,
+      "evidence_level": "commit_history"
+    }
+  ]
+}
