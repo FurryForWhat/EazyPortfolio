@@ -22,6 +22,20 @@ The portfolio webpage (`EazyPortfolio-web/`) is a thin, dumb renderer — it fet
 - Git push credentials configured (SSH or HTTPS) for your portfolio repo
 - A `.portfolio/config.json` with your GitHub username and portfolio repo URL
 
+### Setup (first time)
+
+Fork this repo, then copy the template files into place:
+
+```bash
+# User config — fill in your GitHub username and fork URL
+cp EazyPortfolio/.portfolio/config.template.json EazyPortfolio/.portfolio/config.json
+
+# Portfolio data — starts empty, the pipeline fills it
+cp EazyPortfolio-web/projects.template.json EazyPortfolio-web/projects.json
+```
+
+Edit `EazyPortfolio/.portfolio/config.json` and replace the `REPLACE_WITH_` placeholders with your actual values.
+
 ### Config
 
 In `EazyPortfolio/.portfolio/config.json`:
