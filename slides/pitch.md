@@ -7,7 +7,7 @@ theme: default
 style: |
   section {
     background: #0d1117;
-    color: #336590;
+    color: #e6edf3;
     font-family: 'Segoe UI', sans-serif;
   }
   h1 { color: #58a6ff; font-size: 2rem; }
@@ -19,67 +19,38 @@ style: |
 ---
 
 <!--
-SLIDE 1 — Who's my person?
+SLIDE 1 (0:00–0:20) — Who's my person? + Their problem
 VISUAL IDEA:
-  Dark background. Center: simple icon of a developer (laptop silhouette).
-  Around them: floating GitHub logo, commit bubbles ("fix bug", "add feature", "refactor").
-  Bottom corner: small text "commit after commit, the story disappears."
-  Mood: quiet, slightly lonely. No clutter.
+  Left third: developer silhouette at a laptop, commit bubbles floating around
+  ("fix bug", "wip", "refactor").
+  Right two-thirds: terminal wall-of-text (raw git log) fading into a blank
+  white portfolio page — the contrast is the point.
+  One caption line at the very bottom: "The story is in there. Buried."
+  Mood: quiet, slightly frustrating.
 -->
 
-# Who's my person?
+# Who's my person? Their problem.
 
 <br>
 
-## A developer who builds things in public.
+A developer who builds in public — pushes commits, closes issues, solves real problems.
 
 <br>
 
-They push commits.
-They close issues.
-They solve real problems.
+`git log` already knows the whole story: what broke, where they struggled, how they fixed it.
 
-<br>
-
-**But lazy to Docs.**
+**But that evidence dies inside the repo.** Recruiters don't read commit history. Even the developer forgets.
 
 ---
 
 <!--
-SLIDE 2 — Their problem
+SLIDE 2 (0:20–0:40) — What I built
 VISUAL IDEA:
-  Left half: terminal window showing raw `git log` output — wall of text,
-  timestamps, cryptic messages ("fix", "wip", "tmp2", "revert revert").
-  Right half: a visitor looking at a blank portfolio page, big empty white space.
-  One line at bottom center: "The story is in there. Buried."
-  Mood: frustrating contrast.
--->
-
-# Their problem
-
-<br>
-
-`git log` knows everything.
-
-- Which files broke the most
-- Where they struggled hardest
-- How they eventually fixed it
-
-<br>
-
-**That evidence dies inside the repo.**
-Recruiters don't read commit history.
-Even the developer forgets.
-
----
-
-<!--
-SLIDE 3 — What I built
-VISUAL IDEA:
-  Clean 3-node flow: GitHub icon → robot/agent icon (glowing) → portfolio card.
-  The portfolio card shows: title, "Challenge:", "Resolution:" fields — not just a README.
-  One bold line below: "/update-portfolio"
-  Mood: elegant, inevitable, like it was always supposed to work this way.
+  Clean 3-node flow: GitHub icon → glowing agent icon → portfolio card.
+  The portfolio card shows: title, "CH:", "RES:" fields — visibly different
+  from a plain README dump.
+  One bold line under the flow: "/update-portfolio"
+  Mood: elegant, inevitable.
 -->
 
 # What I built
@@ -90,9 +61,7 @@ VISUAL IDEA:
 
 <br>
 
-Push to GitHub →
-Agent analyzes commit history →
-Portfolio page auto-updates.
+Push to GitHub → agent analyzes commit history → portfolio page auto-updates.
 
 <br>
 
@@ -101,14 +70,11 @@ One command: **`/update-portfolio`**
 ---
 
 <!--
-SLIDE 4 — How I built it
+SLIDE 3 (0:40–1:00) — How I built it
 VISUAL IDEA:
-  4 horizontal layers stacked like cards, each a slightly different dark shade:
-    Layer 1 (top): "Skills  →  rules + output format"
-    Layer 2:        "MCP     →  GitHub read/write access"
-    Layer 3:        "Subagents → fetch · analyze · publish"
-    Layer 4 (bottom): "projects.json → portfolio webpage"
-  No arrows needed — the stack itself implies flow.
+  4 horizontal layered cards, each a slightly different dark shade, stacked
+  top to bottom: Skills → MCP → Subagents → JSON. No arrows needed — the
+  stack itself implies flow downward into the webpage.
   Mood: clean architecture, nothing wasted.
 -->
 
@@ -125,113 +91,41 @@ VISUAL IDEA:
 
 <br>
 
-Zero boilerplate from scratch.
-Claude Code wrote the code.
-I wrote the rules.
+Claude Code wrote the code. I wrote the rules.
 
 ---
 
 <!--
-SLIDE 5 — MCP: …
+SLIDE 4 (1:00–1:20) — MCP + Skill + Agent (the evidence slide)
 VISUAL IDEA:
-  Center: GitHub Octocat icon inside a glowing circle labeled "GitHub MCP Server".
-  Two arrows branching out left and right:
-    Left:  "github-fetcher   →  reads repos, commits, README"
-    Right: "portfolio-publisher → writes JSON, git push"
-  Bottom: small note "one MCP server, two subagents share it"
-  Mood: efficient, multiplied.
+  Three equal columns, like three index cards side by side.
+  Column 1 (MCP): GitHub Octocat icon, label "GitHub MCP Server",
+    sub-label "read + write, shared by 2 agents"
+  Column 2 (Skill): open markdown file icon, label "github-analyzer.skill.md",
+    sub-label "commit-evidence rules, not guesses"
+  Column 3 (Agent): three small robot icons stacked, label "fetcher · analyzer · publisher",
+    sub-label "Haiku · Sonnet · Haiku"
+  Mood: this is the proof-of-work slide — concrete, not abstract.
 -->
 
-# MCP: GitHub as the agent's hands
+# MCP · Skill · Agent
 
 <br>
 
-**GitHub MCP Server** connects Claude to the entire repo.
+**MCP** — `.mcp.json`, GitHub server. Fetcher reads repos/commits, publisher writes JSON back.
 
-<br>
+**Skill** — `github-analyzer.skill.md`. Forces every "problem solved" to come from real commit evidence, not a guess.
 
-- `github-fetcher` reads: repos, commits, README
-- `portfolio-publisher` writes: JSON → git push
-
-<br>
-
-One MCP server.
-Two subagents. Both directions.
-**No custom API wrapper needed.**
+**Agent** — `github-fetcher` (Haiku) → `github-analyzer` (Sonnet) → `portfolio-publisher` (Haiku). Reasoning only where it's needed.
 
 ---
 
 <!--
-SLIDE 6 — Skill: …
+SLIDE 5 (1:20–1:40) — Why it matters
 VISUAL IDEA:
-  Open markdown file visual (code block style), showing just two key fields:
-    "problem_solved":  "one concrete technical difficulty"
-    "how_i_solved_it": "resolution grounded in commit evidence"
-  Below the code block, two columns:
-    WITHOUT skill → "various bugs 🤷"
-    WITH skill    → "currency rounding fixed via Money value object ✓"
-  Mood: precision beats guessing.
--->
-
-# Skill: the contract between agents
-
-<br>
-
-`github-analyzer.skill.md` tells the analyzer:
-
-- Where to look (commit hotspots, not just README)
-- What counts as a "real problem"
-- How long each field can be
-- What to do when evidence is missing
-
-<br>
-
-**Without it:** vague summaries, inconsistent JSON.
-**With it:** every project card sounds like a case study.
-
----
-
-<!--
-SLIDE 7 — Agent: …
-VISUAL IDEA:
-  Three boxes in a horizontal row, connected by arrows:
-    Box 1: "github-fetcher"    label: "Haiku  |  Bash + Read tools"
-    Box 2: "github-analyzer"   label: "Sonnet |  no tools, skill preloaded"
-    Box 3: "portfolio-publisher" label: "Haiku |  Bash + Write tools"
-  Below each box: one-line job description.
-  At bottom: "model matched to task complexity = cheaper + faster"
-  Mood: each agent doing exactly one thing well.
--->
-
-# Agent: three specialists, one pipeline
-
-<br>
-
-| Subagent | Model | Job |
-|---|---|---|
-| `github-fetcher` | Haiku | Clone repo, extract hotspots |
-| `github-analyzer` | Sonnet | Reason about evidence → JSON |
-| `portfolio-publisher` | Haiku | Merge JSON, git push |
-
-<br>
-
-Reasoning where it's needed.
-Speed where it's not.
-
----
-
-<!--
-SLIDE 8 — Why it matters
-VISUAL IDEA:
-  Split screen. Left: a terminal running `/update-portfolio` — clean output:
-    "✓ 7 repos processed"
-    "✓ 2 updated"
-    "✓ Published."
-  Right: a polished portfolio card showing:
-    Project title
-    "Challenge: ..."
-    "Resolution: ..."
-  No clutter. Just the before (terminal) and after (card).
+  Split screen. Left: terminal running /update-portfolio with clean output
+  ("✓ 7 checked · 2 updated · Published"). Right: one polished portfolio
+  card showing CH:/RES: fields. Before (terminal) and after (card), nothing else.
   Mood: satisfying payoff.
 -->
 
@@ -239,32 +133,28 @@ VISUAL IDEA:
 
 <br>
 
-Your commit history already contains your story.
-
-This pipeline just **reads it and tells it.**
+Your commit history already contains your story. This pipeline just **reads it and tells it.**
 
 <br>
 
-- Recruiters see problems you solved, not just tech you used
-- You remember what you actually built
-- Portfolio stays fresh without touching it
-
-<br>
+Recruiters see problems you solved, not just tech you used.
+You remember what you actually built.
+Portfolio stays fresh without touching it.
 
 **The work updates the portfolio. Not the other way around.**
 
 ---
 
 <!--
-SLIDE 9 — Done checklist
+SLIDE 6 (1:40–2:00) — Done checklist
 VISUAL IDEA:
   Dark card centered on screen. Three checklist items with large checkboxes:
-    ☐  repo public
-    ☐  MCP + skill + agent used
-    ☐  report.md in team repo
-  Each item has a subtle icon next to it (GitHub mark, puzzle piece, document).
-  Bottom right: small text — "Furry · June 2026"
-  Mood: clean closure. Ship it.
+    ☐ repo public
+    ☐ MCP + skill + agent used
+    ☐ report.md in team repo
+  Small icon beside each (GitHub mark, puzzle piece, document).
+  Bottom right, small text: "FurryForWhat · June 2026"
+  Mood: clean closure, ship it.
 -->
 
 # Done checklist
