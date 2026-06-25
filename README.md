@@ -18,7 +18,8 @@ The portfolio webpage (`EazyPortfolio-web/`) is a thin, dumb renderer — it fet
 
 ### Prerequisites
 
-- [Claude Code](https://claude.ai/code) with the GitHub MCP server connected
+- [Claude Code](https://claude.ai/code)
+- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`)
 - Git push credentials configured (SSH or HTTPS) for your portfolio repo
 - A `.portfolio/config.json` with your GitHub username and portfolio repo URL
 

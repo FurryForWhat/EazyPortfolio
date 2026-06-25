@@ -73,7 +73,7 @@ One command: **`/update-portfolio`**
 SLIDE 3 (0:40–1:00) — How I built it
 VISUAL IDEA:
   4 horizontal layered cards, each a slightly different dark shade, stacked
-  top to bottom: Skills → MCP → Subagents → JSON. No arrows needed — the
+  top to bottom: Skills → CLI → Subagents → JSON. No arrows needed — the
   stack itself implies flow downward into the webpage.
   Mood: clean architecture, nothing wasted.
 -->
@@ -85,7 +85,7 @@ VISUAL IDEA:
 | Layer | What it does |
 |---|---|
 | **Skills** | Rules + output format |
-| **MCP** | GitHub read / write access |
+| **gh CLI** | GitHub repo discovery |
 | **Subagents** | Fetch → Analyze → Publish |
 | **JSON** | Single source of truth |
 
@@ -96,11 +96,11 @@ Claude Code wrote the code. I wrote the rules.
 ---
 
 <!--
-SLIDE 4 (1:00–1:20) — MCP + Skill + Agent (the evidence slide)
+SLIDE 4 (1:00–1:20) — CLI + Skill + Agent (the evidence slide)
 VISUAL IDEA:
   Three equal columns, like three index cards side by side.
-  Column 1 (MCP): GitHub Octocat icon, label "GitHub MCP Server",
-    sub-label "read + write, shared by 2 agents"
+  Column 1 (CLI): GitHub Octocat + terminal icon, label "gh CLI + git",
+    sub-label "repo discovery, clone, push"
   Column 2 (Skill): open markdown file icon, label "github-analyzer.skill.md",
     sub-label "commit-evidence rules, not guesses"
   Column 3 (Agent): three small robot icons stacked, label "fetcher · analyzer · publisher",
@@ -108,11 +108,11 @@ VISUAL IDEA:
   Mood: this is the proof-of-work slide — concrete, not abstract.
 -->
 
-# MCP · Skill · Agent
+# CLI · Skill · Agent
 
 <br>
 
-**MCP** — `.mcp.json`, GitHub server. Fetcher reads repos/commits, publisher writes JSON back.
+**CLI** — `gh repo list` for discovery, `git` for clone/push. No API wrapper needed.
 
 **Skill** — `github-analyzer.skill.md`. Forces every "problem solved" to come from real commit evidence, not a guess.
 
@@ -150,7 +150,7 @@ SLIDE 6 (1:40–2:00) — Done checklist
 VISUAL IDEA:
   Dark card centered on screen. Three checklist items with large checkboxes:
     ☐ repo public
-    ☐ MCP + skill + agent used
+    ☐ skill + agent used
     ☐ report.md in team repo
   Small icon beside each (GitHub mark, puzzle piece, document).
   Bottom right, small text: "FurryForWhat · June 2026"
@@ -162,11 +162,11 @@ VISUAL IDEA:
 <br>
 
 - [ ] repo public
-- [ ] MCP + skill + agent used
+- [ ] skill + agent used
 - [ ] report.md in team repo
 
 <br><br>
 
-**Stack:** Claude Code · GitHub MCP · Skills · Subagents · Vercel
+**Stack:** Claude Code · gh CLI · Skills · Subagents · Vercel
 
 **One command ships it all: `/update-portfolio`**

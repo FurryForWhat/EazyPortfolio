@@ -10,8 +10,8 @@ Repository: `FurryForWhat/EazyPortfolio`
 
 ## Stack
 
-- **Claude Code** — Skills, subagents, and MCP orchestrate the pipeline
-- **GitHub MCP Server** — Read/write access to repos (commit history, README, JSON output)
+- **Claude Code** — Skills and subagents orchestrate the pipeline
+- **GitHub CLI (`gh`)** — Lists repos; git handles clone/push
 - **Vercel** — Hosts the generated portfolio page
 - **Marp** — Markdown-to-slides for the pitch deck in `slides/`
 
@@ -30,7 +30,7 @@ The project has NO traditional code (no build system, no source files, no tests)
 ### Key files (to be created as the project evolves)
 
 - **Skills** — `github-analyzer.skill.md` defines the contract between agents: where to look (commit hotspots), what counts as a real problem, field length limits, fallback when evidence is missing
-- **MCP config** — GitHub MCP Server provides bidirectional read/write access to repos
+- **GitHub CLI** — `gh repo list` for repo discovery; git handles clone/push
 - **Output** — `projects.json` is the single source of truth for portfolio data; the portfolio webpage reads from it
 
 ### Data model

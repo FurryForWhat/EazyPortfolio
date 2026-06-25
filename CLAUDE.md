@@ -19,8 +19,8 @@ The web directory and the pipeline directory are separate concerns: the pipeline
 
 ## Stack
 
-- **Claude Code** — Skills, subagents, and MCP orchestrate the pipeline
-- **GitHub MCP Server** — Read/write access to repos (commit history, README, JSON output)
+- **Claude Code** — Skills and subagents orchestrate the pipeline
+- **GitHub CLI (`gh`)** — Lists repos; git handles clone/push
 - **Vercel** — Hosts the generated portfolio page (`EazyPortfolio-web/`)
 - **Marp** — Markdown-to-slides for the pitch deck in `EazyPortfolio/slides/`
 
@@ -130,7 +130,7 @@ npx @marp-team/marp-cli slides/pitch.md -o slides/pitch.pdf
 
 ### Portfolio pipeline
 
-Run inside Claude Code with the GitHub MCP server connected:
+Run inside Claude Code (requires `gh` CLI authenticated):
 ```
 /update-portfolio
 ```

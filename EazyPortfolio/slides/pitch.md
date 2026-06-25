@@ -105,7 +105,7 @@ SLIDE 4 — How I built it
 VISUAL IDEA:
   4 horizontal layers stacked like cards, each a slightly different dark shade:
     Layer 1 (top): "Skills  →  rules + output format"
-    Layer 2:        "MCP     →  GitHub read/write access"
+    Layer 2:        "gh CLI  →  GitHub repo discovery"
     Layer 3:        "Subagents → fetch · analyze · publish"
     Layer 4 (bottom): "projects.json → portfolio webpage"
   No arrows needed — the stack itself implies flow.
@@ -119,7 +119,7 @@ VISUAL IDEA:
 | Layer | What it does |
 |---|---|
 | **Skills** | Rules + output format |
-| **MCP** | GitHub read / write access |
+| **gh CLI** | GitHub repo discovery |
 | **Subagents** | Fetch → Analyze → Publish |
 | **JSON** | Single source of truth |
 
@@ -132,32 +132,31 @@ I wrote the rules.
 ---
 
 <!--
-SLIDE 5 — MCP: …
+SLIDE 5 — How the pipeline accesses GitHub
 VISUAL IDEA:
-  Center: GitHub Octocat icon inside a glowing circle labeled "GitHub MCP Server".
+  Center: GitHub Octocat icon with terminal/CLI icon.
   Two arrows branching out left and right:
-    Left:  "github-fetcher   →  reads repos, commits, README"
-    Right: "portfolio-publisher → writes JSON, git push"
-  Bottom: small note "one MCP server, two subagents share it"
-  Mood: efficient, multiplied.
+    Left:  "github-fetcher   →  clones repos, reads commits, README"
+    Right: "portfolio-publisher → merges JSON, git push"
+  Bottom: small note "gh CLI + git — no API wrapper needed"
+  Mood: simple, standard tools.
 -->
 
-# MCP: GitHub as the agent's hands
+# How the pipeline accesses GitHub
 
 <br>
 
-**GitHub MCP Server** connects Claude to the entire repo.
+**`gh` CLI** lists repos. **`git`** handles clone and push.
 
 <br>
 
-- `github-fetcher` reads: repos, commits, README
-- `portfolio-publisher` writes: JSON → git push
+- `github-fetcher` clones repos, reads commits + README
+- `portfolio-publisher` merges JSON, git pushes
 
 <br>
 
-One MCP server.
-Two subagents. Both directions.
-**No custom API wrapper needed.**
+No API wrapper needed.
+Just standard CLI tools.
 
 ---
 
@@ -260,7 +259,7 @@ SLIDE 9 — Done checklist
 VISUAL IDEA:
   Dark card centered on screen. Three checklist items with large checkboxes:
     ☐  repo public
-    ☐  MCP + skill + agent used
+    ☐  skill + agent used
     ☐  report.md in team repo
   Each item has a subtle icon next to it (GitHub mark, puzzle piece, document).
   Bottom right: small text — "Furry · June 2026"
@@ -272,11 +271,11 @@ VISUAL IDEA:
 <br>
 
 - [ ] repo public
-- [ ] MCP + skill + agent used
+- [ ] skill + agent used
 - [ ] report.md in team repo
 
 <br><br>
 
-**Stack:** Claude Code · GitHub MCP · Skills · Subagents · Vercel
+**Stack:** Claude Code · gh CLI · Skills · Subagents · Vercel
 
 **One command ships it all: `/update-portfolio`**
