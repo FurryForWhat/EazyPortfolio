@@ -1,0 +1,44 @@
+{
+  "last_synced": "2026-06-19T10:00:00Z",
+  "projects": [
+    {
+      "id": "eazy-portfolio",
+      "title": "Pushfolio",
+      "repo_url": "https://github.com/FurryForWhat/EazyPortfolio",
+      "summary": "An AI agent pipeline that reads GitHub commit history and auto-publishes structured project summaries to a personal portfolio page.",
+      "tech_stack": ["Claude Code", "GitHub MCP", "Node.js", "Vercel"],
+      "problem_solved": "Commit history contains real problem-solving evidence but no tool surfaces it in a readable narrative form.",
+      "how_i_solved_it": "Built a three-subagent pipeline — fetcher, analyzer, publisher — where hotspot files (highest commit count) drive the 'challenge' narrative rather than README alone.",
+      "status": "in_progress",
+      "last_updated": "2026-06-19T08:00:00Z",
+      "demo_url": null,
+      "evidence_level": "commit_history"
+    },
+    {
+      "id": "dsa",
+      "title": "DSA & Algorithm Lab",
+      "repo_url": "https://github.com/FurryForWhat/DSA",
+      "summary": "A personal coding scratchpad for practicing data structures and algorithms — AVL trees, stacks, client-server patterns, and encryption — written in Python while learning the concepts.",
+      "tech_stack": ["Python"],
+      "problem_solved": "Textbook pseudocode skips the edge cases and language-specific details that only surface when you actually type the code and run it.",
+      "how_i_solved_it": "Implemented each data structure as a standalone Python file, testing manually as I went — this repo is the record of trial-and-error, not a polished library.",
+      "status": "archived",
+      "last_updated": "2023-10-26T02:32:12Z",
+      "demo_url": null,
+      "evidence_level": "readme_only"
+    },
+    {
+      "id": "vibe-code-tours-github-io",
+      "title": "Vibe Code Tours",
+      "repo_url": "https://github.com/FurryForWhat/vibe-code-tours.github.io",
+      "summary": "A bilingual (EN + Burmese) static site for a Myanmar AI coding bootcamp — Astro 5, Tailwind CSS, zero client JS by default. I contributed as part of a larger team, working within an established codebase and reviewing PRs from a growing cohort of student builders.",
+      "tech_stack": ["Astro 5", "Tailwind CSS", "TypeScript"],
+      "problem_solved": "Joining an active project mid-flight means inheriting someone else's design decisions, i18n system, and contribution flow — pushing code without breaking the Burmese locale pipeline or existing UI patterns.",
+      "how_i_solved_it": "Studied the existing Astro component conventions before touching anything, kept PRs small and scoped (self-hosted fonts, GPU-friendly animations, builder onboarding docs), and followed the project's CODEOWNERS/review flow to stay aligned with the lead.",
+      "status": "in_progress",
+      "last_updated": "2026-06-14T08:15:09Z",
+      "demo_url": "https://vibecode.tours",
+      "evidence_level": "commit_history"
+    }
+  ]
+}

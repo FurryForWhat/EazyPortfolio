@@ -1,7 +1,7 @@
 # Pipeline output — auto-generated, never hand-edited
 # Template at EazyPortfolio-web/projects.template.json → copy to projects.json
-projects.json
-!projects.template.json
+# projects.json
+# !projects.template.json
 
 # Personal user config — contains GitHub username and repo URL
 # Template at EazyPortfolio/.portfolio/config.template.json → copy to config.json
