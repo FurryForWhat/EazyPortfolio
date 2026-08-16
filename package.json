@@ -1,0 +1,36 @@
+{
+  "name": "eazyportfolio-v2",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "generate": "node index.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.49.1",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@anthropic-ai/sdk": "^0.36.3",
+    "next": "^15.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sonner": "^1.7.2",
+    "lucide-react": "^0.476.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "eslint": "^9.0.0",
+    "@eslint/eslintrc": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

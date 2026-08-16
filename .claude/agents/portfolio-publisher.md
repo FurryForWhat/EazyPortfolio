@@ -51,6 +51,10 @@ If there's nothing to commit (merge produced an identical file), skip the commit
 
 If push fails (e.g. auth, conflict), stop and return the error rather than retrying silently or force-pushing.
 
+### Validation gate
+
+A `PreToolUse` hook validates `projects.json` against the schema before `git commit` is allowed to run. If the commit is blocked, the hook's stderr will name the exact field(s) and reason(s). Fix the merged JSON accordingly (re-run the Write step) and retry the commit — do not attempt to bypass or disable the hook.
+
 ## 6. Clean up
 
 ```bash
