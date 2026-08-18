@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>EazyPortfolio — Build your portfolio</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1a1a2e; }
+  h1 { font-size: 1.5rem; }
+  button { background: #16213e; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .repo { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin: 12px 0; }
+  .card h3 { margin: 0 0 6px; }
+  .error { color: #b00020; }
+  .muted { color: #666; font-size: 0.9rem; }
+  #step { display: none; }
+  #step.active { display: block; }
+</style>
+</head>
+<body>
+
+<h1>EazyPortfolio</h1>
+
+<div id="step-connect" class="step active">
+  <p>Connect your GitHub to generate an evidence-based portfolio from your real commit history.</p>
+  <button onclick="location.href='/auth/github'">Connect GitHub</button>
+</div>
+
+<div id="step-select" class="step">
+  <p>Signed in as <strong id="username"></strong>. Pick the repos to include:</p>
+  <div id="repoList"></div>
+  <button id="generateBtn" onclick="generate()" disabled>Generate portfolio</button>
+</div>
+
+<div id="step-preview" class="step">
+  <h2>Preview</h2>
+  <p class="muted">Review before publishing — nothing is written yet.</p>
+  <div id="previewList"></div>
+  <button onclick="publish()">Publish</button>
+</div>
+
+<div id="step-done" class="step">
+  <h2>Published 🎉</h2>
+  <p id="doneMsg"></p>
+</div>
+
+<script>
+let approvedEntries = [];
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function init() {
+  const me = await fetch('/api/me').then(r => r.json());
+  if (me.connected) {
+    document.getElementById('username').textContent = me.username;
+    showStep('step-select');
+    loadRepos();
+  }
+}
+
+async function loadRepos() {
+  const repos = await fetch('/api/repos').then(r => r.json());
+  const list = document.getElementById('repoList');
+  list.innerHTML = repos.map(r => `
+    <label class="repo">
+      <input type="checkbox" value="${r.fullName}" onchange="toggleGenerateBtn()">
+      <span>${r.fullName}${r.private ? ' 🔒' : ''} <span class="muted">${r.description || ''}</span></span>
+    </label>
+  `).join('');
+}
+
+function toggleGenerateBtn() {
+  const anyChecked = document.querySelectorAll('#repoList input:checked').length > 0;
+  document.getElementById('generateBtn').disabled = !anyChecked;
+}
+
+async function generate() {
+  const repos = [...document.querySelectorAll('#repoList input:checked')].map(el => el.value);
+  document.getElementById('generateBtn').disabled = true;
+  document.getElementById('generateBtn').textContent = 'Generating...';
+
+  const { results } = await fetch('/api/generate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repos }),
+  }).then(r => r.json());
+
+  approvedEntries = results.filter(r => r.ok).map(r => r.entry);
+
+  document.getElementById('previewList').innerHTML = results.map(r => r.ok ? `
+    <div class="card">
+      <h3>${r.entry.title}</h3>
+      <p>${r.entry.summary}</p>
+      <p><strong>Problem:</strong> ${r.entry.problem_solved}</p>
+      <p><strong>Solution:</strong> ${r.entry.how_i_solved_it}</p>
+      <p class="muted">${r.entry.tech_stack.join(', ')} — ${r.entry.evidence_level}</p>
+    </div>
+  ` : `
+    <div class="card error">
+      <h3>${r.repo}</h3>
+      <p>Failed: ${r.error}</p>
+    </div>
+  `).join('');
+
+  showStep('step-preview');
+}
+
+async function publish() {
+  const res = await fetch('/api/publish', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entries: approvedEntries }),
+  }).then(r => r.json());
+
+  if (res.error) {
+    document.getElementById('doneMsg').innerHTML = `<span class="error">${res.error}</span>`;
+  } else {
+    document.getElementById('doneMsg').textContent = `${res.projectCount} project(s) now in your portfolio.`;
+  }
+  showStep('step-done');
+}
+
+init();
+</script>
+</body>
+</html>
