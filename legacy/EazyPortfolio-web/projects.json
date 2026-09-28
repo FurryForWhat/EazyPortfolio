@@ -1,0 +1,24 @@
+{
+  "last_synced": "2026-08-19T16:16:53.475Z",
+  "projects": [
+    {
+      "id": "eazyportfolio",
+      "title": "Automated Portfolio Generator via AI Agent Pipeline",
+      "repo_url": "https://github.com/FurryForWhat/EazyPortfolio",
+      "summary": "A self-hosted pipeline that clones repositories, extracts commit hotspots, and uses AI agents to generate structured case-study cards for a static portfolio site. The system runs entirely through CLI tools and markdown-based agent prompts, producing a single projects.json source file.",
+      "tech_stack": [
+        "Python",
+        "JSON",
+        "Markdown",
+        "GitHub CLI",
+        "Claude Code"
+      ],
+      "problem_solved": "The initial fetcher and analyzer agents relied on GitHub MCP, which introduced unnecessary complexity and unstable connections during repo scanning.",
+      "how_i_solved_it": "I replaced the MCP dependency with direct gh CLI invocations and rewrote the analyzer prompts to enforce strict JSON schemas and skip failed repos gracefully.",
+      "status": "completed",
+      "last_updated": "2026-08-18T08:08:31Z",
+      "demo_url": null,
+      "evidence_level": "commit_history"
+    }
+  ]
+}
