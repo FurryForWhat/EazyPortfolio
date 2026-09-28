@@ -12,7 +12,8 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(_cookies: { name: string; value: string; options: any }[]) {
-          // No-op: Server Components cannot modify cookies
+          // Route handlers can set cookies via the response
+          // This will be handled by the route handler itself
         },
       },
     }

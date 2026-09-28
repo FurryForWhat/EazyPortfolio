@@ -36,30 +36,49 @@ OUTPUT: return exactly this JSON shape and nothing else — no markdown fences, 
 }`;
 
 /**
- * Calls the model directly over the Anthropic /v1/messages shape.
- * Works against api.anthropic.com OR any Anthropic-compatible endpoint —
- * including Alibaba's DashScope gateway (ANTHROPIC_BASE_URL from your
- * Phase 0 settings.json env block), since it speaks the same request shape.
+ * Calls the model over the OpenAI-compatible /chat/completions shape.
+ * Works against any OpenAI-compatible endpoint, including Alibaba's
+ * DashScope / Bailian MaaS gateway (ANTHROPIC_BASE_URL ending in
+ * .../compatible-mode/v1), which speaks the OpenAI request shape rather
+ * than Anthropic's /v1/messages.
+ *
+ * Env vars (names kept for backwards compatibility with the Anthropic-shape version):
+ *   ANTHROPIC_BASE_URL — base URL incl. /v1, e.g. https://.../compatible-mode/v1
+ *   ANTHROPIC_API_KEY  — bearer key (DashScope sk-... or OpenAI sk-...)
+ *   ANALYZER_MODEL     — model id, e.g. qwen3.7-flash
  */
 export async function analyzeRepo(evidence, { baseUrl, apiKey, model } = {}) {
-  const base = baseUrl || process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
+  const rawBase = baseUrl || process.env.ANTHROPIC_BASE_URL || 'https://api.openai.com/v1';
   const key = apiKey || process.env.ANTHROPIC_API_KEY;
   const modelName = model || process.env.ANALYZER_MODEL || 'qwen3.5-plus';
 
-  if (!key) throw new Error('Missing API key: set ANTHROPIC_API_KEY (or pass apiKey) in the environment');
+  if (!key) {
+    throw new Error(`Missing API key: set ANTHROPIC_API_KEY (or pass apiKey) in the environment. 
+Environment variables available: 
+  ANTHROPIC_BASE_URL: ${process.env.ANTHROPIC_BASE_URL ? 'SET' : 'NOT SET'}
+  ANALYZER_MODEL: ${process.env.ANALYZER_MODEL ? 'SET' : 'NOT SET'}
+  GITHUB_TOKEN: ${process.env.GITHUB_TOKEN ? 'SET' : 'NOT SET'}`);
+  }
 
-  const res = await fetch(`${base}/v1/messages`, {
+  // Normalise trailing slash. Callers store the base already including the
+  // /v1 version segment, so we append /chat/completions directly.
+  const base = rawBase.replace(/\/+$/, '');
+  const endpoint = `${base}/chat/completions`;
+
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${key}`,
     },
     body: JSON.stringify({
       model: modelName,
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(evidence, null, 2) }],
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: JSON.stringify(evidence, null, 2) },
+      ],
     }),
   });
 
@@ -68,7 +87,7 @@ export async function analyzeRepo(evidence, { baseUrl, apiKey, model } = {}) {
   }
 
   const data = await res.json();
-  const text = (data.content || []).map((b) => b.text || '').join('').trim();
+  const text = (data.choices?.[0]?.message?.content || '').toString().trim();
 
   try {
     return JSON.parse(text);

@@ -1,34 +1,57 @@
 import { redirect } from "next/navigation";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import Dashboard from "@/components/dashboard";
-import PortfolioCard from "@/components/portfolio-card";
+import { createClient } from "@/lib/supabase-server";
 
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: existingProfile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", session.user.id)
     .single();
 
+  const githubId = parseInt(session.user.user_metadata?.github_id || "0");
+  const githubLogin = session.user.user_metadata?.github_login || session.user.email?.split("@")[0] || "";
+
+  let profile = existingProfile;
+
   if (!profile) {
-    const { data: newProfile, error } = await supabase
+    // Check if profile exists by github_id (might have different auth.uid)
+    const { data: existingByGithub } = await supabase
       .from("profiles")
-      .insert({
-        id: session.user.id,
-        github_id: parseInt(session.user.user_metadata?.github_id || "0"),
-        github_login: session.user.user_metadata?.github_login || session.user.email?.split("@")[0] || "",
-      })
       .select("*")
+      .eq("github_id", githubId)
       .single();
 
-    if (error || !newProfile) {
-      return <div className="flex min-h-screen items-center justify-center"><p className="text-red-400">Failed to create profile.</p></div>;
+    if (existingByGithub) {
+      profile = existingByGithub;
+    } else {
+      const { data: newProfile, error } = await supabase
+        .from("profiles")
+        .insert({
+          id: session.user.id,
+          github_id: githubId,
+          github_login: githubLogin,
+        })
+        .select("*")
+        .single();
+
+      if (error || !newProfile) {
+        console.error("Profile creation error:", error);
+        return (
+          <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
+            <div className="text-center">
+              <p className="text-red-400 mb-2">Failed to create profile.</p>
+              <p className="text-sm text-[#7b80a0]">{error?.message || "Unknown error"}</p>
+            </div>
+          </div>
+        );
+      }
+      profile = newProfile;
     }
   }
 
