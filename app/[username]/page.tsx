@@ -1,16 +1,28 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PortfolioCard from "@/components/portfolio-card";
+import { fetchPortfolioProjects } from "@/lib/portfolio";
 
 // Force request-time rendering so new portfolios appear immediately
 // without waiting for the next Vercel rebuild. Revalidate every 60s.
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Public portfolio page: anyone can visit /{username}, but RLS only lets the
+// anon key read the visitor's *own* profiles/runs — so the anon query returned
+// nothing and this page 404'd for every non-owner. The service-role key is
+// read here server-side only (never NEXT_PUBLIC, never shipped to the browser)
+// and only ever selects a profile row plus that profile's project entries.
+const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    )
+  : createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
 export async function generateMetadata({
   params,
@@ -31,25 +43,17 @@ export default async function UserProfilePage({
 }) {
   const { username } = await params;
 
-  const { data: runs } = await supabase
-    .from("runs")
+  const { data: profile } = await supabase
+    .from("profiles")
     .select("id")
-    .eq("username", username)
-    .eq("status", "success")
-    .order("started_at", { ascending: false })
-    .limit(1);
+    .eq("github_login", username)
+    .maybeSingle();
 
-  if (!runs?.length) {
+  if (!profile) {
     notFound();
   }
 
-  const { data: entries } = await supabase
-    .from("project_entries")
-    .select("entry")
-    .eq("run_id", runs[0].id)
-    .order("created_at", { ascending: true });
-
-  const projects = (entries || []).map((e) => e.entry);
+  const projects = await fetchPortfolioProjects(supabase, profile.id);
 
   return (
     <div className="min-h-screen bg-[#070b1a]">
@@ -83,7 +87,7 @@ export default async function UserProfilePage({
         <div className="max-w-4xl mx-auto px-6 py-8 text-center text-sm text-[#7b80a0]">
           Powered by{" "}
           <a
-            href="https://eazyportfolio.dev"
+            href={(process.env.NEXT_PUBLIC_BASE_URL || "").replace(/\/$/, "") || "/"}
             className="text-[#4f6ef6] hover:underline"
           >
             EazyPortfolio

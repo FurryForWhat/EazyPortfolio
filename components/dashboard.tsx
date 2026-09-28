@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { fetchPortfolioProjects } from "@/lib/portfolio";
 import PortfolioCard from "./portfolio-card";
 
 const supabase = createClient();
@@ -79,7 +80,10 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
         throw new Error(data.detail || data.error || "Sync failed");
       }
 
-      router.push(`/generate/${data.runId}`);
+      // sync returns as soon as the run row exists — generation continues
+      // in the background, so the progress page starts polling right away.
+      const repos = Array.from(selected).map(encodeURIComponent).join(",");
+      router.push(`/generate/${data.runId}?repos=${repos}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sync failed");
     } finally {
@@ -89,24 +93,7 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
 
   async function refreshProjects() {
     try {
-      const { data: runs } = await supabase
-        .from("runs")
-        .select("id")
-        .eq("profile_id", profile.id)
-        .eq("status", "success")
-        .order("started_at", { ascending: false })
-        .limit(1);
-
-      if (runs?.length) {
-        const { data: entries } = await supabase
-          .from("project_entries")
-          .select("entry")
-          .eq("run_id", runs[0].id)
-          .order("created_at", { ascending: true });
-        setProjects(entries?.map((e) => e.entry) || []);
-      } else {
-        setProjects([]);
-      }
+      setProjects(await fetchPortfolioProjects(supabase, profile.id));
     } catch {
       // Silently fail — dashboard still works
     }

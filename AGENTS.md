@@ -40,6 +40,11 @@ cd EazyPortfolio-web && python3 -m http.server 3000
 
 Sequential (not parallel) to avoid `/tmp` clone directory collisions:
 
+> **v2 note:** the live pipeline (`pipeline/index.mjs`) no longer clones repos —
+> it uses the GitHub REST API — so repos now run with bounded concurrency
+> (`PIPELINE_CONCURRENCY`, default 4). The sequential rule below applies only
+> to the archived v1 pipeline in `legacy/`.
+
 | Stage | Model | Tools | Job |
 |---|---|---|---|
 | **github-fetcher** | Haiku | Bash, Read | Clone repo → extract top 5 hotspot files (by commit count) + README + metadata |
@@ -82,7 +87,7 @@ Root-level: `last_synced` (ISO 8601), `projects` (array).
 
 - **Evidence-based only.** Every `problem_solved` and `how_i_solved_it` must come from commit history, not README paraphrasing. Thin evidence → `evidence_level: readme_only`. Never hallucinate.
 - **Config validation.** If `.portfolio/config.json` contains `REPLACE_WITH_` placeholders, stop and ask the user to fill them in.
-- **Sequential processing.** One repo at a time — prevents temp directory collisions.
+- **Bounded parallel processing (v2).** Repos run concurrently up to `PIPELINE_CONCURRENCY` (default 4) — v1's one-at-a-time rule existed only to prevent `/tmp` clone collisions, which no longer occur since v2 fetches via the GitHub REST API. One failing repo never blocks the pool.
 - **Publisher runs once.** After all repos are analyzed, merges and pushes.
 - **Solo vs team framing.** Analyzer checks contributor counts; team contributions are framed differently.
 - **Model selection is deliberate.** Sonnet only for analysis (reasoning); Haiku for fetch/publish (speed).

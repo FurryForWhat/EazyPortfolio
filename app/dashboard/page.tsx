@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Dashboard from "@/components/dashboard";
 import { createClient } from "@/lib/supabase-server";
+import { fetchPortfolioProjects } from "@/lib/portfolio";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -55,24 +56,8 @@ export default async function DashboardPage() {
     }
   }
 
-  // Fetch user's latest successful run and its projects
-  const { data: runs } = await supabase
-    .from("runs")
-    .select("id")
-    .eq("profile_id", profile.id)
-    .eq("status", "success")
-    .order("started_at", { ascending: false })
-    .limit(1);
-
-  let projects: Record<string, unknown>[] = [];
-  if (runs?.length) {
-    const { data: entries } = await supabase
-      .from("project_entries")
-      .select("entry")
-      .eq("run_id", runs[0].id)
-      .order("created_at", { ascending: true });
-    projects = entries?.map((e) => e.entry) || [];
-  }
+  // Portfolio = freshest entry per currently selected repo (see lib/portfolio)
+  const projects = await fetchPortfolioProjects(supabase, profile.id);
 
   return <Dashboard profile={profile} initialProjects={projects} />;
 }

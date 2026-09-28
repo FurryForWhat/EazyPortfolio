@@ -37,9 +37,12 @@ function getSupabase() {
  * supabase/migrations/001_initial.sql and the shape app/api/sync/route.ts and
  * app/api/status/[runId]/route.ts expect back.
  *
- * @param {{ profileId: string, username: string, selectedRepos: { name: string, github_url?: string }[], githubToken?: string }} args
+ * @param {{ profileId: string, username: string, selectedRepos: { name: string, github_url?: string }[], githubToken?: string, runId?: string }} args
+ *   Pass `runId` when the caller already created the run row (app/api/sync
+ *   returns it to the browser before generation starts so the progress page
+ *   can begin polling immediately).
  */
-export async function orchestrate({ profileId, username, selectedRepos, githubToken }) {
+export async function orchestrate({ profileId, username, selectedRepos, githubToken, runId: existingRunId }) {
   if (!profileId || !username) throw new Error('orchestrate() requires profileId and username');
   if (!Array.isArray(selectedRepos) || selectedRepos.length === 0) {
     throw new Error('orchestrate() requires a non-empty selectedRepos array');
@@ -51,49 +54,105 @@ export async function orchestrate({ profileId, username, selectedRepos, githubTo
   // for CLI/local testing, never for real per-user generation.
   const token = githubToken || process.env.GITHUB_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
 
-  const { data: run, error: runError } = await supabase
-    .from('runs')
-    .insert({ profile_id: profileId, username, status: 'fetching' })
-    .select()
-    .single();
-  if (runError) throw new Error(`Failed to create run: ${runError.message}`);
-
-  const runId = run.id;
-  const results = [];
+  let runId = existingRunId;
+  if (runId) {
+    const { error: startError } = await supabase
+      .from('runs')
+      .update({ status: 'fetching', started_at: new Date().toISOString() })
+      .eq('id', runId);
+    if (startError) throw new Error(`Failed to start run: ${startError.message}`);
+  } else {
+    const { data: run, error: runError } = await supabase
+      .from('runs')
+      .insert({ profile_id: profileId, username, status: 'fetching' })
+      .select()
+      .single();
+    if (runError) throw new Error(`Failed to create run: ${runError.message}`);
+    runId = run.id;
+  }
+  const results = new Array(selectedRepos.length);
   let totalSucceeded = 0;
   let totalFailed = 0;
 
-  for (const repo of selectedRepos) {
+  // Split out malformed entries first — they never reach the pool, so they
+  // can't skew the phase counters below.
+  const valid = [];
+  selectedRepos.forEach((repo, idx) => {
     const [owner, name] = (repo.name || '').split('/');
     if (!owner || !name) {
-      results.push({ repo: repo.name, ok: false, error: 'Invalid repo format, expected "owner/repo"' });
+      results[idx] = { repo: repo.name, ok: false, error: 'Invalid repo format, expected "owner/repo"' };
       totalFailed++;
-      continue;
+    } else {
+      valid.push({ repo, owner, name, idx });
     }
+  });
 
-    try {
-      await supabase.from('runs').update({ status: 'fetching' }).eq('id', runId);
-      const evidence = await fetchRepoEvidence(owner, name, { token });
+  // Coarse run-level progress: repos run in parallel, so per-repo status
+  // writes would thrash. Instead flip the phase once every repo crosses it.
+  let fetchDone = 0;
+  let analyzeDone = 0;
+  let phaseAnalyzing = false;
+  let phasePublishing = false;
 
+  async function phaseComplete(stage) {
+    if (stage === 'fetch') fetchDone++;
+    else analyzeDone++;
+
+    if (!phaseAnalyzing && valid.length > 0 && fetchDone === valid.length) {
+      phaseAnalyzing = true;
       await supabase.from('runs').update({ status: 'analyzing' }).eq('id', runId);
+    }
+    if (!phasePublishing && valid.length > 0 && analyzeDone === valid.length) {
+      phasePublishing = true;
+      await supabase.from('runs').update({ status: 'publishing' }).eq('id', runId);
+    }
+  }
+
+  async function processRepo({ repo, owner, name, idx }) {
+    let fetched = false;
+    let analyzed = false;
+    try {
+      const evidence = await fetchRepoEvidence(owner, name, { token });
+      fetched = true;
+      await phaseComplete('fetch');
+
       const entry = await analyzeRepo(evidence);
+      analyzed = true;
+      await phaseComplete('analyze');
 
       const { ok, errors } = validateEntry(entry);
       if (!ok) throw new Error(`Validation failed: ${errors.join('; ')}`);
 
-      await supabase.from('runs').update({ status: 'publishing' }).eq('id', runId);
       const { error: insertError } = await supabase
         .from('project_entries')
         .insert({ run_id: runId, repo_name: repo.name, entry });
       if (insertError) throw new Error(`Failed to save entry: ${insertError.message}`);
 
-      results.push({ repo: repo.name, ok: true, entry });
+      results[idx] = { repo: repo.name, ok: true, entry };
       totalSucceeded++;
     } catch (err) {
-      results.push({ repo: repo.name, ok: false, error: err.message });
+      results[idx] = { repo: repo.name, ok: false, error: err.message };
       totalFailed++;
+      // Counters must still advance or the phase flags never flip and the
+      // progress UI hangs on the previous step.
+      if (!fetched) await phaseComplete('fetch');
+      if (!analyzed) await phaseComplete('analyze');
     }
   }
+
+  // Bounded pool: keeps 4 repos in flight at once instead of one-at-a-time.
+  // V2 has no per-repo temp clones (GitHub REST only), so the old v1
+  // "one repo at a time" rule doesn't apply.
+  const concurrency = Math.max(1, Number(process.env.PIPELINE_CONCURRENCY) || 4);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, valid.length) }, async () => {
+      while (cursor < valid.length) {
+        const item = valid[cursor++];
+        await processRepo(item);
+      }
+    })
+  );
 
   await supabase
     .from('runs')

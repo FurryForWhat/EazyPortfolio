@@ -1,93 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import RunProgress from "@/components/run-progress";
 import PortfolioCard from "@/components/portfolio-card";
 
 const supabase = createClient();
 
-interface Profile {
-  id: string;
-  github_login: string;
-}
-
-export default function GeneratePage({
-  params,
-}: {
-  params: Promise<{ runId: string }>;
-}) {
+function GenerateInner({ runId }: { runId: string }) {
   const router = useRouter();
-  const [runId, setRunId] = useState<string>("");
+  // Repo list for this run comes from the dashboard as ?repos=a,b,c — the
+  // runs table doesn't store selections, and this survives a page refresh.
+  const searchParams = useSearchParams();
+  const allRepos = (searchParams.get("repos") || "")
+    .split(",")
+    .map((r) => r.trim())
+    .filter(Boolean);
+
   const [run, setRun] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Record<string, unknown>[]>([]);
+  const [completedRepos, setCompletedRepos] = useState<string[]>([]);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const poll = useCallback(async () => {
+    const [{ data: runRow }, { data: entries }] = await Promise.all([
+      supabase.from("runs").select("*").eq("id", runId).single(),
+      supabase
+        .from("project_entries")
+        .select("repo_name, entry")
+        .eq("run_id", runId)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    if (runRow) setRun(runRow);
+    if (entries) {
+      setCompletedRepos(entries.map((e) => e.repo_name));
+      setProjects(entries.map((e) => e.entry));
+    }
+
+    if (runRow && runRow.status !== "success" && runRow.status !== "failed") {
+      pollRef.current = setTimeout(poll, 1500);
+    }
+  }, [runId]);
 
   useEffect(() => {
-    (async () => {
-      const resolved = await params;
-      setRunId(resolved.runId);
+    let cancelled = false;
 
+    (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push("/login");
         return;
       }
-
-      // Poll for status updates
-      const interval = setInterval(async () => {
-        const { data } = await supabase
-          .from("runs")
-          .select("*")
-          .eq("id", resolved.runId)
-          .single();
-
-        if (data) {
-          setRun(data);
-
-          // Also fetch projects if run is complete
-          if (data.status === "success" || data.status === "failed") {
-            clearInterval(interval);
-            // Fetch project entries
-            const { data: entries } = await supabase
-              .from("project_entries")
-              .select("entry")
-              .eq("run_id", resolved.runId)
-              .order("created_at", { ascending: true });
-            if (entries) {
-              setProjects(entries.map((e) => e.entry));
-            }
-          }
-        }
-      }, 2000);
-
-      // Initial fetch
-      const { data: initialRun } = await supabase
-        .from("runs")
-        .select("*")
-        .eq("id", resolved.runId)
-        .single();
-
-      if (initialRun) {
-        setRun(initialRun);
-        if (initialRun.status === "success" || initialRun.status === "failed") {
-          clearInterval(interval);
-          const { data: entries } = await supabase
-            .from("project_entries")
-            .select("entry")
-            .eq("run_id", resolved.runId)
-            .order("created_at", { ascending: true });
-          if (entries) {
-            setProjects(entries.map((e) => e.entry));
-          }
-        }
-      }
-
-      setLoading(false);
-      return () => clearInterval(interval);
+      if (cancelled) return;
+      await poll();
+      if (!cancelled) setLoading(false);
     })();
-  }, [params, router]);
+
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, [poll, router]);
 
   if (loading) {
     return (
@@ -105,10 +81,18 @@ export default function GeneratePage({
     );
   }
 
+  const base = (process.env.NEXT_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  const portfolioUrl = base
+    ? `${base}/${run.username}`
+    : `/${run.username}`;
+  const portfolioLabel = base
+    ? `${base.replace(/^https?:\/\//, "")}/${run.username}`
+    : `your site/${run.username}`;
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-16">
       <h1 className="text-2xl font-bold mb-6">Generating Portfolio</h1>
-      <RunProgress run={run} />
+      <RunProgress run={run} allRepos={allRepos} completedRepos={completedRepos} />
 
       {run.status === "success" && (
         <>
@@ -119,12 +103,12 @@ export default function GeneratePage({
             <p className="text-sm text-[#7b80a0] mb-4">
               View your portfolio at:{" "}
               <a
-                href={`/${run.username}`}
+                href={portfolioUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#4f6ef6] underline"
+                className="text-[#4f6ef6] underline break-all"
               >
-                eazyportfolio.dev/{run.username}
+                {portfolioLabel}
               </a>
             </p>
             <button
@@ -164,5 +148,37 @@ export default function GeneratePage({
         </div>
       )}
     </div>
+  );
+}
+
+export default function GeneratePage({
+  params,
+}: {
+  params: Promise<{ runId: string }>;
+}) {
+  const [runId, setRunId] = useState<string>("");
+
+  useEffect(() => {
+    params.then((p) => setRunId(p.runId));
+  }, [params]);
+
+  if (!runId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-2 border-[#4f6ef6] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="animate-spin h-8 w-8 border-2 border-[#4f6ef6] border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <GenerateInner runId={runId} />
+    </Suspense>
   );
 }

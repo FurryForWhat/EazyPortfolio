@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { orchestrate } from "../../../pipeline/index.mjs";
@@ -88,31 +89,62 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Run orchestrator
-  try {
-    const result = await orchestrate({
-      profileId: profile.id,
-      username: profile.github_login,
-      githubToken: profile.github_access_token,
-      selectedRepos: repoSelections.map((r: string) => ({
-        name: r,
-        github_url: `https://github.com/${r}`,
-      })),
-    });
+  // Create the run row up-front so the browser can navigate to
+  // /generate/[runId] and start polling before any repo is processed.
+  const { data: run, error: runError } = await supabase
+    .from("runs")
+    .insert({ profile_id: profile.id, username: profile.github_login, status: "pending" })
+    .select()
+    .single();
 
-    return NextResponse.json({
-      runId: result.runId,
-      results: result.results,
-      totalProcessed: result.totalProcessed,
-      totalSucceeded: result.totalSucceeded,
-      totalFailed: result.totalFailed,
-    });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    console.error("Orchestration failed:", error);
+  if (runError || !run) {
     return NextResponse.json(
-      { error: "Pipeline failed", detail: error },
+      { error: "Failed to create run", detail: runError?.message },
       { status: 500 }
     );
   }
+
+  // Kick off generation after the response is sent — the request returns
+  // in milliseconds instead of blocking for the full pipeline run.
+  const selected = repoSelections.map((r) => ({
+    name: r,
+    github_url: `https://github.com/${r}`,
+  }));
+  const runId = run.id;
+  const profileId = profile.id;
+  const username = profile.github_login;
+  const githubToken = profile.github_access_token;
+
+  after(async () => {
+    try {
+      const result = await orchestrate({
+        profileId,
+        username,
+        selectedRepos: selected,
+        githubToken,
+        runId,
+      });
+      console.log(
+        `[sync] run ${runId} finished: ${result.totalSucceeded}/${result.totalProcessed} ok`
+      );
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error(`[sync] run ${runId} failed:`, detail);
+      const { createClient } = await import("@supabase/supabase-js");
+      const admin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      await admin
+        .from("runs")
+        .update({
+          status: "failed",
+          error: detail,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", runId);
+    }
+  });
+
+  return NextResponse.json({ runId });
 }

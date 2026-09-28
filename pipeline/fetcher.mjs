@@ -93,15 +93,27 @@ export async function fetchRepoEvidence(owner, repo, { token, commitSample = 50 
   const fileCounts = new Map();
   const fileMessages = new Map();
 
-  for (const c of commitList) {
-    const detail = await ghJson(`/repos/${owner}/${repo}/commits/${c.sha}`, token);
-    const message = detail.commit.message.split('\n')[0];
-    for (const f of detail.files || []) {
-      if (isIgnored(f.filename)) continue;
-      fileCounts.set(f.filename, (fileCounts.get(f.filename) || 0) + 1);
-      if (!fileMessages.has(f.filename)) fileMessages.set(f.filename, []);
-      // commitList arrives newest-first; unshift to end up chronological (oldest first)
-      fileMessages.get(f.filename).unshift(message);
+  // The commit-list endpoint omits changed files, so each commit needs its
+  // own detail call. Fetch in parallel batches (10) instead of strictly
+  // sequentially — ~50 calls drops from ~14s to ~2s while staying far below
+  // GitHub's 5,000 req/hr authenticated limit. Batches stay ordered so the
+  // chronological unshift below still produces oldest-first messages.
+  const BATCH = 10;
+  for (let i = 0; i < commitList.length; i += BATCH) {
+    const batch = commitList.slice(i, i + BATCH);
+    const details = await Promise.all(
+      batch.map((c) => ghJson(`/repos/${owner}/${repo}/commits/${c.sha}`, token))
+    );
+
+    for (const detail of details) {
+      const message = detail.commit.message.split('\n')[0];
+      for (const f of detail.files || []) {
+        if (isIgnored(f.filename)) continue;
+        fileCounts.set(f.filename, (fileCounts.get(f.filename) || 0) + 1);
+        if (!fileMessages.has(f.filename)) fileMessages.set(f.filename, []);
+        // commitList arrives newest-first; unshift to end up chronological (oldest first)
+        fileMessages.get(f.filename).unshift(message);
+      }
     }
   }
 

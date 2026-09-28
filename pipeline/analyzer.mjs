@@ -65,33 +65,82 @@ Environment variables available:
   const base = rawBase.replace(/\/+$/, '');
   const endpoint = `${base}/chat/completions`;
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: modelName,
-      max_tokens: 1024,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: JSON.stringify(evidence, null, 2) },
-      ],
-    }),
+  const payload = JSON.stringify({
+    model: modelName,
+    // Reasoning models (glm-5.3-flash etc.) spend tokens on
+    // reasoning_content before emitting content — raise via
+    // ANALYZER_MAX_TOKENS (8192+) for those. Non-reasoning models
+    // finish well under 2048.
+    max_tokens: Number(process.env.ANALYZER_MAX_TOKENS) || 2048,
+    temperature: 0.2,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: JSON.stringify(evidence, null, 2) },
+    ],
   });
 
-  if (!res.ok) {
-    throw new Error(`Analyzer API call failed: ${res.status} ${await res.text()}`);
+  async function attempt() {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: payload,
+    }).catch((err) => {
+      // DNS/reset/timeouts — treat as transient below.
+      err.transient = true;
+      throw err;
+    });
+
+    if (!res.ok) {
+      const bodyText = await res.text();
+      const err = new Error(`Analyzer API call failed: ${res.status} ${bodyText}`);
+      // 429 (rate limit) and 5xx (upstream overload) are worth retrying;
+      // 4xx auth/validation errors are not.
+      err.transient = res.status === 429 || res.status >= 500;
+      throw err;
+    }
+
+    const data = await res.json();
+    const choice = data.choices?.[0]?.message;
+    const text = (choice?.content || '').toString().trim();
+
+    if (!text) {
+      const reason = data.choices?.[0]?.finish_reason || 'unknown';
+      const reasoning = (choice?.reasoning_content || '').slice(0, 300);
+      const err = new Error(
+        `Analyzer returned empty content (finish_reason: ${reason}). ` +
+        `Reasoning models exhaust max_tokens before producing content — raise ANALYZER_MAX_TOKENS.` +
+        (reasoning ? `\nReasoning started with: ${reasoning}` : '')
+      );
+      err.transient = true; // often a loaded endpoint truncating output
+      throw err;
+    }
+
+    try {
+      // Tolerate ```json fences some models wrap around the object.
+      return JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''));
+    } catch (e) {
+      const err = new Error(`Analyzer did not return valid JSON: ${e.message}\nRaw output:\n${text}`);
+      err.transient = true;
+      throw err;
+    }
   }
 
-  const data = await res.json();
-  const text = (data.choices?.[0]?.message?.content || '').toString().trim();
-
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    throw new Error(`Analyzer did not return valid JSON: ${e.message}\nRaw output:\n${text}`);
+  // NIM endpoints intermittently answer 503 "Service temporarily overloaded"
+  // and occasionally return junk under load — retry with backoff.
+  const maxAttempts = Math.max(1, Number(process.env.ANALYZER_RETRIES) || 6);
+  let lastErr;
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      lastErr = err;
+      if (!err.transient || i === maxAttempts) break;
+      const delay = 1000 * 2 ** (i - 1) + Math.floor(Math.random() * 500);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
+  throw lastErr;
 }
