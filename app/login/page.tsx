@@ -13,10 +13,14 @@ export default function LoginPage() {
     setError("");
     
     const supabase = createClient();
+    // Use the origin the page is actually served from so the callback never
+    // points at localhost in production, even if NEXT_PUBLIC_BASE_URL is
+    // missing or stale in the deployment env.
+    const base = window.location.origin.replace(/\/$/, "");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+        redirectTo: `${base}/auth/callback`,
         scopes: "read:user public_repo",
       },
     });
