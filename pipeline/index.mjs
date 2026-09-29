@@ -71,6 +71,7 @@ export async function orchestrate({ profileId, username, selectedRepos, githubTo
     runId = run.id;
   }
   const results = new Array(selectedRepos.length);
+  const failureDetails = [];
   let totalSucceeded = 0;
   let totalFailed = 0;
 
@@ -131,8 +132,13 @@ export async function orchestrate({ profileId, username, selectedRepos, githubTo
       results[idx] = { repo: repo.name, ok: true, entry };
       totalSucceeded++;
     } catch (err) {
+      const detail = `${repo.name}: ${String(err.message).replace(/\s+/g, ' ').slice(0, 500)}`;
       results[idx] = { repo: repo.name, ok: false, error: err.message };
+      failureDetails.push(detail);
       totalFailed++;
+      // Surface the real cause — a bare "N of M repo(s) failed" is
+      // undiagnosable from the UI, the run row, or the function logs.
+      console.error(`[pipeline] ${detail}`);
       // Counters must still advance or the phase flags never flip and the
       // progress UI hangs on the previous step.
       if (!fetched) await phaseComplete('fetch');
@@ -159,7 +165,10 @@ export async function orchestrate({ profileId, username, selectedRepos, githubTo
     .update({
       status: totalSucceeded > 0 ? 'success' : 'failed',
       finished_at: new Date().toISOString(),
-      error: totalFailed > 0 ? `${totalFailed} of ${selectedRepos.length} repo(s) failed` : null,
+      error:
+        totalFailed > 0
+          ? `${totalFailed} of ${selectedRepos.length} repo(s) failed — ${failureDetails.join(' | ')}`.slice(0, 2000)
+          : null,
     })
     .eq('id', runId);
 
