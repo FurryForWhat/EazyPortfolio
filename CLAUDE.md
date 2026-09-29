@@ -1,149 +1,139 @@
-# CLAUDE.md
+# CLAUDE.md — EazyPortfolio V2
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## What this is
 
-## EazyPortfolio — Agent Pipeline Portfolio Generator
+EazyPortfolio is a **self-serve GitHub → portfolio SaaS**. A user signs in with GitHub, picks which of their repos to show, hits generate, and gets a live portfolio page at `/{username}` (or a custom domain). Generation runs as a serverless pipeline: fetch repo evidence from the GitHub REST API, have an LLM turn it into a structured project entry, store it in Supabase.
 
-EazyPortfolio is a Claude Code agent pipeline that reads a developer's GitHub commit history and auto-generates a portfolio of case-study-style project cards. The pipeline is triggered by a single slash command: `/update-portfolio`.
+No Claude Code dependency at runtime — the `/update-portfolio` command, the Claude subagents, and `projects.json` in git are all **V1**, now archived under `legacy/`. The skills and agents in `.claude/` are developer tooling for maintaining this repo, not part of the product.
 
-Repository: `FurryForWhat/EazyPortfolio`
+**Live:** https://eazy-portfolio-eight.vercel.app
 
-## Repository layout
+## Repo layout
 
-| Directory | What it is |
+| Path | Purpose |
 |---|---|
-| `EazyPortfolio/` | The Claude Code project: skills, subagent definitions, config, slides, and its own git history (deployed as a portfolio **source** repo) |
-| `EazyPortfolio-web/` | Static portfolio webpage — fetches `projects.json` at runtime and renders project cards. Deployed to Vercel. |
+| `app/` | Next.js 15 App Router — pages and route handlers |
+| `app/[username]/` | Public portfolio page |
+| `app/dashboard/` | Repo selection + generate UI |
+| `app/generate/[runId]/` | Live progress page (polls status) |
+| `app/api/` | Route handlers — `auth/`, `repos/`, `sync/`, `status/[runId]/`, `export/[username]/`, `logout/` |
+| `components/` | `dashboard.tsx`, `portfolio-card.tsx`, `run-progress.tsx` |
+| `lib/` | Supabase clients (`supabase.ts` edge, `supabase-route.ts`, `supabase-server.ts`, `supabase-edge.ts`), `portfolio.ts` |
+| `pipeline/` | Framework-agnostic generation core — `fetcher.mjs`, `analyzer.mjs`, `publisher.mjs`, `validate.mjs`, `index.mjs` (orchestrator) |
+| `supabase/migrations/` | PostgreSQL schema — `001_initial.sql`, `002_add_github_token.sql`, `003_add_profile_policies.sql` |
+| `.claude/` | Developer skills + agents (see table below). **Not gitignored** |
+| `legacy/` | Archived V1 — Claude Code pipeline, static `EazyPortfolio-web/`, original skills/agents. Read-only reference |
+| `slides/` | Marp decks — `pitch.md` (V1), `tech-stack.md` (V2) |
+| `feedback/` | QA findings filed as GitHub issues |
+| `middleware.ts` | Currently a no-op pass-through (Supabase auth gating is TODO) |
+| `next.config.ts` | Build-critical env check + CORS headers |
 
-The web directory and the pipeline directory are separate concerns: the pipeline writes `projects.json`, the webpage reads it. They share no build tooling.
+App code is TypeScript, pipeline is plain `.mjs` — the pipeline stays runnable with plain `node`, no build step.
 
 ## Stack
 
-- **Claude Code** — Skills and subagents orchestrate the pipeline
-- **GitHub CLI (`gh`)** — Lists repos; git handles clone/push
-- **Vercel** — Hosts the generated portfolio page (`EazyPortfolio-web/`)
-- **Marp** — Markdown-to-slides for the pitch deck in `EazyPortfolio/slides/`
-
-## Architecture
-
-The project has NO traditional build system or source code. It is built entirely on Claude Code's agent infrastructure.
-
-### Pipeline stages (three subagents)
-
-| Subagent | Model | Tools | Job |
-|---|---|---|---|
-| `github-fetcher` | Haiku | Bash, Read | Clone a repo, extract commit hotspots (top 5 files by commit count), README content, and repo metadata |
-| `github-analyzer` | Sonnet | None | Reason about fetcher evidence → structured JSON entry (`problem_solved`, `how_i_solved_it`, tech stack, status). Pure reasoning — no tool access. |
-| `portfolio-publisher` | Haiku | Bash, Read, Write | Clone portfolio repo, merge new entries into `projects.json`, commit + push. Called exactly once per orchestrator run. |
-
-### Orchestrator
-
-The `update-portfolio` skill (`EazyPortfolio/.claude/skills/update-portfolio/SKILL.md`) is the orchestrator. It:
-1. Reads `.portfolio/config.json` for `github_username`, `portfolio_repo_url`, and `exclude_repos`
-2. Lists the user's GitHub repos (skipping excluded ones and the portfolio repo itself)
-3. Runs each repo through fetcher → analyzer in sequence (not parallel, to avoid `/tmp` collisions)
-4. Calls publisher once with all analyzed projects
-
-### Skills (defining contracts between agents)
-
-| Skill file | Purpose |
-|---|---|
-| `EazyPortfolio/.claude/skills/update-portfolio/SKILL.md` | Orchestrator: sequences subagents, handles failures, reports results |
-| `EazyPortfolio/.claude/skills/github-analyzer/SKILL.md` | Defines the analyzer's output schema, evidence rules (hotspot analysis, fallback to README-only), and hard rules (no vague summaries, 2-sentence caps) |
-| `EazyPortfolio/.claude/skills/portfolio-page/SKILL.md` | Data contract for the webpage: sort order (`in_progress` first → then recency), field-to-UI mapping, status badge treatment, empty/loading/error states |
-
-### Agent definitions
-
-| Agent file | Defines |
-|---|---|
-| `EazyPortfolio/.claude/agents/github-fetcher.md` | Fetcher subagent: model, tools, output contract |
-| `EazyPortfolio/.claude/agents/github-analyzer.md` | Analyzer subagent: model (Sonnet for reasoning), no tools, skill preloaded |
-| `EazyPortfolio/.claude/agents/portfolio-publisher.md` | Publisher subagent: model, tools, exact step-by-step procedure (clone → merge → write → commit → push → cleanup) |
-
-### Data flow
-
-```
-User's GitHub repos
-  → github-fetcher (per repo: raw JSON of hotspots + README + metadata)
-  → github-analyzer (per repo: structured portfolio entry JSON)
-  → orchestrator collects all entries
-  → portfolio-publisher (merges into EazyPortfolio-web/projects.json, git pushes)
-  → Vercel deploys EazyPortfolio-web/
-```
-
-### Data model (projects.json)
-
-Each portfolio entry:
-- `id` — kebab-case repo name
-- `title`, `summary`, `repo_url`
-- `tech_stack` — array of strings, ordered by relevance (not alphabetical)
-- `problem_solved` — one specific, concrete technical difficulty (2 sentences max, never "various bugs")
-- `how_i_solved_it` — resolution grounded in commit evidence (2 sentences max)
-- `status` — `in_progress` | `completed` | `archived`
-- `last_updated` — ISO 8601
-- `demo_url` — string or null
-- `evidence_level` — `commit_history` (≥10 commits with hotspots) or `readme_only` (fallback)
-
-Root-level: `last_synced` (ISO 8601), `projects` (array).
-
-`projects.json` is the single source of truth — the webpage reads nothing else.
-
-### Config
-
-`EazyPortfolio/.portfolio/config.json`:
-```json
-{
-  "github_username": "FurryForWhat",
-  "portfolio_repo_url": "https://github.com/FurryForWhat/EazyPortfolio.git",
-  "exclude_repos": []
-}
-```
-
-If any value starts with `REPLACE_WITH_`, the orchestrator must stop and tell the user to fill in real values.
-
-## The webpage (`EazyPortfolio-web/`)
-
-Single static HTML file (`index.html`) with inline CSS + JS. Fetches `projects.json` at runtime — no hardcoded project data. Key behaviors:
-- Sort: `in_progress` first, then by `last_updated` descending
-- Tech stack → pill/badge elements (not comma-separated)
-- `problem_solved` + `how_i_solved_it` → CH:/RES: split-panel layout (the page's signature element)
-- `demo_url` null → omit element entirely (no disabled button)
-- `evidence_level: readme_only` → subtle low-emphasis marker, never a warning
-- States: loading spinner, empty message ("No projects yet — run `/update-portfolio`"), error with retry button
-- Single page only — no routing/pagination
+Next.js 15 (App Router) · React 19 · Tailwind CSS 4 · Supabase (Postgres + Auth + RLS) · Vercel (hosting, `after()` for background work) · GitHub REST API · OpenAI-compatible LLM endpoint via `@anthropic-ai/sdk` · Marp for slides.
 
 ## Commands
 
-### Slides (Marp)
-
-From the `EazyPortfolio/` directory:
 ```bash
-# Preview slides while editing
-npx @marp-team/marp-cli slides/pitch.md --preview
-
-# Export slides to HTML
-npx @marp-team/marp-cli slides/pitch.md -o slides/pitch.html
-
-# Export slides to PDF
-npx @marp-team/marp-cli slides/pitch.md -o slides/pitch.pdf
+npm run dev                        # http://localhost:3000
+npm run build                      # production build (fails fast on missing build-critical env)
+npm run lint
+npm run generate owner/repo        # CLI: generate locally, writes projects.json instead of Supabase
 ```
 
-### Portfolio pipeline
-
-Run inside Claude Code (requires `gh` CLI authenticated):
+Marp slides (from repo root):
+```bash
+npx @marp-team/marp-cli slides/tech-stack.md --preview
+npx @marp-team/marp-cli slides/tech-stack.md -o slides/tech-stack.html
 ```
-/update-portfolio
+
+Diagnosing a run or reviewing an entry: see **Skills and agents** below.
+
+## Environment variables
+
+Load from `.env.local` (copy `.env.example`); production values live in Vercel → Settings → Environment Variables.
+
+**Build-critical** — `next.config.ts` throws during `phase-production-build` if any is missing:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+**Runtime-critical** — build warns, features fail without them:
+- `GITHUB_TOKEN` — local/CLI fallback; real generation uses `profiles.github_access_token`
+- `ANTHROPIC_BASE_URL` — include `/v1` (or the gateway's compatible-mode path)
+- `ANTHROPIC_API_KEY`
+- `ANALYZER_MODEL` — e.g. `qwen3.5-plus`
+- `NEXT_PUBLIC_BASE_URL`
+
+**Optional:** `PIPELINE_CONCURRENCY` (default `4`), `PROJECTS_JSON_PATH` (CLI output target).
+
+> **Vercel env changes require a redeploy.** And `NEXT_PUBLIC_*` values are inlined at *build* time — changing one needs a rebuild, not just a restart. Forgetting this is the single most common cause of "I fixed it but it still fails".
+
+## Data model
+
+Five tables (`supabase/migrations/001_initial.sql`), all with RLS enabled:
+
+| Table | Keys | Notes |
+|---|---|---|
+| `profiles` | `id` (= `auth.users.id`), `github_id`, `github_login` | plus `github_access_token` (migration 002) |
+| `selected_repos` | `profile_id`, `github_repo`, `github_url`, `included` | `UNIQUE(profile_id, github_repo)` |
+| `runs` | `id`, `profile_id`, `username`, `status`, `error`, `started_at`, `finished_at` | `status` ∈ `pending, fetching, analyzing, publishing, success, failed` |
+| `project_entries` | `run_id`, `repo_name`, `entry` (JSONB) | one row per generated project |
+| `custom_domains` | `domain`, `verified`, `verifiable` | collected but not yet verified/routed — see `feedback/issues.md` |
+
+**Entry schema** (the `entry` JSONB, also the V1 `projects.json` element):
+
+`id` (kebab-case) · `title` · `summary` · `repo_url` · `tech_stack` (array, **relevance-ordered, never alphabetical**) · `problem_solved` · `how_i_solved_it` · `status` (`in_progress|completed|archived`) · `last_updated` (ISO 8601) · `demo_url` (string or null) · `evidence_level` (`commit_history|readme_only`).
+
+Enforced by `pipeline/validate.mjs` → `validateEntry()`.
+
+## Pipeline stages
+
+`pipeline/index.mjs` exports `orchestrate({ profileId, username, selectedRepos, githubToken, runId })`, called from `app/api/sync/route.ts` inside Vercel's `after()` so the request returns immediately.
+
+```
+POST /api/sync
+  → creates run row (status: pending) → returns runId → browser navigates to /generate/[runId]
+  → after(): orchestrate()
+       fetch     fetcher.mjs     GitHub REST — README, metadata, commit hotspots (no git clone)
+       analyze   analyzer.mjs    LLM → one JSON entry (OpenAI-compatible /chat/completions)
+       validate  validate.mjs    validateEntry() — invalid entry throws, that repo fails
+       publish   publisher.mjs   insert into project_entries
+     → runs.status = success | failed (finished_at + error always written by the finalizer)
+  → browser polls GET /api/status/[runId]
 ```
 
-The pipeline expects git push credentials (SSH or HTTPS) already configured in the environment — it does not handle auth setup.
+- Repos run through a **bounded pool** (`PIPELINE_CONCURRENCY`, default 4) via `Promise.all` + cursor.
+- One bad repo never stops the pool: its failure is recorded in `failureDetails`, appended to `runs.error` as `"N of M repo(s) failed — repo: cause | repo: cause"`, and the run still finishes `success` if ≥1 repo succeeded.
+- Per-repo errors are logged with a `[pipeline]` prefix.
 
-## Conventions
+### Evidence rules
 
-- The pipeline does not generate boilerplate from scratch — Claude Code writes the code, developers write the rules (skills).
-- Model selection is deliberate: reasoning (Sonnet) only on the analysis stage; speed (Haiku) on fetch and publish.
-- Every portfolio entry must be grounded in commit evidence. When evidence is missing, the analyzer skill defines fallback (`evidence_level: readme_only`) — never hallucinate.
-- `projects.json` is the single source of truth; the portfolio UI reads it and nothing else.
-- Repos are processed sequentially, not in parallel — to keep temp clone directories from colliding.
-- One bad repo should never stop the whole pipeline run — skip it, note it, continue.
-- The publisher runs exactly once per orchestrator run, after all repos are processed.
-- Never hardcode project data into `index.html`.
+**Evidence-based only.** Every `problem_solved` and `how_i_solved_it` must be grounded in commit history, not README paraphrasing. Thin evidence (under 10 commits, no usable hotspots) → `evidence_level: readme_only`, framed as a learning challenge rather than fake production depth. Never hallucinate a struggle the evidence doesn't support. Two sentences max per field. Never "various bugs" or "some issues". Solo vs. team framing follows contributor counts.
+
+Full rules: `AGENTS.md` → *Critical rules*, and the prompt in `pipeline/analyzer.mjs`.
+
+## Skills and agents
+
+Developer tooling under `.claude/` — these are how you, the agent, work on this repo.
+
+| File | Kind | Tools | Model | Use for |
+|---|---|---|---|---|
+| `.claude/skills/run-doctor/SKILL.md` | skill | — | — | Diagnosing a failed/stuck generation run end to end |
+| `.claude/skills/entry-review/SKILL.md` | skill | — | — | Auditing generated entries against the evidence rules |
+| `.claude/agents/run-diagnoser.md` | agent | Read, Bash | sonnet | Read-only root cause for one run → JSON verdict |
+| `.claude/agents/entry-reviewer.md` | agent | none | sonnet | Grades one entry against the 8-rule rubric → JSON |
+
+Typical pairings: **run-doctor** (orchestrator) + **run-diagnoser** (detail gatherer); **entry-review** (orchestrator) + **entry-reviewer** (pure reasoning).
+
+Legacy V1 agents (`github-fetcher`, `github-analyzer`, `portfolio-publisher`) and the `update-portfolio` skill live in `legacy/.claude/` — reference only, do not restore them to `.claude/`.
+
+## Maintenance conventions
+
+- Commit messages: lowercase, scoped — `feat:`, `fix:`, `chore:`, `docs:`.
+- Evidence rules changes go in three places: `pipeline/analyzer.mjs` (prompt), `AGENTS.md` (Critical rules), and the entry-review skill/agent (rubric). Keep them consistent.
+- Schema changes need a new migration in `supabase/migrations/`, never an edit to an applied one.
+- Open QA findings are filed as GitHub issues and summarized in `feedback/issues.md`.
+- `legacy/` is frozen. Fixes go into current V2 code.

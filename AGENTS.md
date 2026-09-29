@@ -2,13 +2,21 @@
 
 ## Architecture
 
-**No build system.** This is a Claude Code agent pipeline (skills + agents), not source code.
+**V2 — Next.js app + serverless pipeline.** This repo is now a self-serve SaaS: sign in with GitHub, pick repos, generate a portfolio, view it at `/{username}`.
 
-Two directories with separate concerns:
-- `EazyPortfolio/` — Pipeline source (skills, agents, config, slides). Deployed as a **source** repo.
-- `EazyPortfolio-web/` — Static portfolio site. Single `index.html` with inline CSS+JS. Fetches `projects.json` at runtime. Deployed to Vercel.
+Layout:
+- `app/` — Next.js 15 App Router: pages (`dashboard`, `generate/[runId]`, `[username]`, `login`) and route handlers (`app/api/` — auth, repos, sync, status, export, logout)
+- `pipeline/` — framework-agnostic core: `fetcher.mjs` (GitHub REST, no clone) → `analyzer.mjs` (LLM) → `validate.mjs` → `publisher.mjs` (Supabase), orchestrated by `index.mjs`
+- `supabase/migrations/` — Postgres schema + RLS
+- `.claude/` — developer skills/agents (run-doctor, entry-review, run-diagnoser, entry-reviewer)
+- `slides/`, `feedback/` — Marp decks and QA findings
+- `legacy/` — frozen V1 (Claude Code pipeline + `EazyPortfolio-web` static site)
 
-The pipeline writes `projects.json`; the webpage reads it. They share no tooling.
+Product data lives in Supabase (`project_entries`); `projects.json` is a V1/CLI-only artifact.
+
+> The V1 sections below (Commands → Config, plus Webpage rendering) are retained as
+> reference for `legacy/`. The **V2 — Self-serve SaaS** section near the bottom is the
+> current system. When the two disagree, V2 wins.
 
 ## Commands
 
