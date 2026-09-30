@@ -24,7 +24,6 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [customDomain, setCustomDomain] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Record<string, unknown>[]>(initialProjects);
 
@@ -68,10 +67,7 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
       const res = await fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          repoSelections: Array.from(selected),
-          customDomain: customDomain || undefined,
-        }),
+        body: JSON.stringify({ repoSelections: Array.from(selected) }),
       });
 
       const data = await res.json();
@@ -102,7 +98,7 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       {/* Header */}
-      <div className="mb-10 flex items-start justify-between gap-4">
+      <div className="mb-10 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-1">
             Welcome, @{profile.github_login}
@@ -116,27 +112,10 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
             await fetch("/api/logout", { method: "POST" });
             router.push("/");
           }}
-          className="shrink-0 rounded-lg border border-[#1a1f3a] px-4 py-2 text-sm font-medium text-[#7b80a0] hover:text-[#e8eaf0] hover:border-[#2a2f4a] transition-colors"
+          className="self-start rounded-lg border border-[#1a1f3a] px-4 py-2 text-sm font-medium text-[#7b80a0] hover:text-[#e8eaf0] hover:border-[#2a2f4a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f6ef6] transition-colors"
         >
           Sign out
         </button>
-      </div>
-
-      {/* Custom domain */}
-      <div className="rounded-xl border border-[#1a1f3a] p-6 bg-[#0c1024] mb-8">
-        <label className="block text-sm font-medium mb-2">
-          Custom domain (optional)
-        </label>
-        <input
-          type="text"
-          placeholder="portfolio.example.com"
-          value={customDomain}
-          onChange={(e) => setCustomDomain(e.target.value)}
-          className="w-full rounded-lg border border-[#1a1f3a] bg-[#070b1a] px-4 py-2 text-sm text-[#e8eaf0] placeholder:text-[#7b80a0] focus:outline-none focus:border-[#4f6ef6]"
-        />
-        <p className="text-xs text-[#7b80a0] mt-2">
-          Add a CNAME record pointing to your hosting after setup.
-        </p>
       </div>
 
       {/* Repo picker */}
@@ -155,6 +134,27 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
         )}
 
         <div className="divide-y divide-[#1a1f3a] max-h-96 overflow-y-auto">
+          {loading && (
+            <div className="px-6 py-10 text-center text-sm text-[#7b80a0]">
+              Loading your repositories…
+            </div>
+          )}
+
+          {!loading && repos.length === 0 && (
+            <div className="px-6 py-10 text-center">
+              <p className="text-sm text-[#7b80a0] mb-3">
+                No repositories found. They may be private, or GitHub may be
+                rate-limiting this session.
+              </p>
+              <button
+                onClick={fetchRepos}
+                className="text-sm text-[#4f6ef6] hover:underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {repos.map((repo) => (
             <label
               key={repo.name}
@@ -193,18 +193,18 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
       </div>
 
       {/* Generate button */}
-      <div className="flex items-center justify-between mb-16">
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-14">
         <button
           onClick={fetchRepos}
           disabled={loading}
-          className="text-sm text-[#7b80a0] hover:text-[#e8eaf0] transition-colors disabled:opacity-50"
+          className="text-sm text-[#7b80a0] hover:text-[#e8eaf0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Refresh list
         </button>
         <button
           onClick={handleSync}
           disabled={selected.size === 0 || syncing}
-          className="rounded-lg bg-[#4f6ef6] px-6 py-3 text-base font-medium text-white hover:bg-[#3d5bd9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-[#4f6ef6] px-6 py-3 text-base font-medium text-white hover:bg-[#3d5bd9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f6ef6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {syncing ? "Generating..." : `Generate Portfolio (${selected.size})`}
         </button>
@@ -224,7 +224,10 @@ export default function Dashboard({ profile, initialProjects = [] }: DashboardPr
 
         {projects.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#1a1f3a] p-8 text-center">
-            <p className="text-[#7b80a0]">No portfolios generated yet. Select repos above and click Generate.</p>
+            <p className="text-[#7b80a0] mb-1">No projects yet.</p>
+            <p className="text-sm text-[#7b80a0]">
+              Select repos above and click Generate to build your portfolio.
+            </p>
           </div>
         ) : (
           <div className="space-y-8">

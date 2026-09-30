@@ -54,18 +54,11 @@ function checkEnv(): void {
 const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   reactStrictMode: true,
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-        ],
-      },
-    ];
-  },
+  // No global headers(): a blanket `Access-Control-Allow-Origin: *` on
+  // `/:path*` advertised the cookie-authenticated API routes (sync, repos,
+  // status, logout) to any origin (issue #5). CORS is now set per route —
+  // only app/api/export/[username]/route.ts sends a wildcard, because that
+  // feed is intentionally public and embeddable.
 };
 
 export default function configure(phase: string): NextConfig {

@@ -59,22 +59,28 @@ export default async function UserProfilePage({
     <div className="min-h-screen bg-[#070b1a]">
       {/* Hero */}
       <header className="border-b border-[#1a1f3a]">
-        <div className="max-w-4xl mx-auto px-6 py-16">
-          <h1 className="text-4xl font-bold mb-2">@{username}</h1>
+        <div className="max-w-4xl mx-auto px-6 py-12 sm:py-16">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 break-words">
+            @{username}
+          </h1>
           <p className="text-[#7b80a0]">
-            {projects.length} project{projects.length !== 1 ? "s" : ""} · Generated from GitHub commit history
+            {projects.length} project{projects.length !== 1 ? "s" : ""} ·
+            Generated from GitHub commit history
           </p>
         </div>
       </header>
 
       {/* Projects */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main className="max-w-4xl mx-auto px-6 py-10 sm:py-12">
         {projects.length === 0 ? (
-          <p className="text-[#7b80a0] text-center py-12">
-            No projects yet. Run /update-portfolio to generate.
-          </p>
+          <div className="rounded-xl border border-dashed border-[#1a1f3a] p-10 text-center">
+            <p className="text-[#7b80a0] mb-2">No projects published yet.</p>
+            <p className="text-sm text-[#7b80a0]">
+              Sign in and generate a portfolio to fill this page.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {projects.map((project, i) => (
               <PortfolioCard key={(project.id as string) + i} project={project} />
             ))}
@@ -83,7 +89,7 @@ export default async function UserProfilePage({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#1a1f3a] mt-16">
+      <footer className="border-t border-[#1a1f3a] mt-10">
         <div className="max-w-4xl mx-auto px-6 py-8 text-center text-sm text-[#7b80a0]">
           Powered by{" "}
           <a

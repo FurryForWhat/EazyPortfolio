@@ -25,23 +25,30 @@ function GenerateInner({ runId }: { runId: string }) {
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const poll = useCallback(async () => {
-    const [{ data: runRow }, { data: entries }] = await Promise.all([
-      supabase.from("runs").select("*").eq("id", runId).single(),
-      supabase
-        .from("project_entries")
-        .select("repo_name, entry")
-        .eq("run_id", runId)
-        .order("created_at", { ascending: true }),
-    ]);
+    // Poll the status API instead of querying `runs` from the browser: the
+    // API is where a dead background task gets reaped into `failed`
+    // (app/api/status/[runId]/route.ts, issue #2), so a killed run resolves
+    // here instead of spinning forever.
+    try {
+      const res = await fetch(`/api/status/${runId}`, { cache: "no-store" });
+      if (res.status === 404) {
+        setRun(null);
+        return;
+      }
+      if (!res.ok) throw new Error(`status ${res.status}`);
 
-    if (runRow) setRun(runRow);
-    if (entries) {
-      setCompletedRepos(entries.map((e) => e.repo_name));
-      setProjects(entries.map((e) => e.entry));
-    }
+      const runRow = await res.json();
+      setRun(runRow);
+      const rows = Array.isArray(runRow.entries) ? runRow.entries : [];
+      setCompletedRepos(rows.map((e: { repo_name: string }) => e.repo_name));
+      setProjects(rows.map((e: { entry: Record<string, unknown> }) => e.entry));
 
-    if (runRow && runRow.status !== "success" && runRow.status !== "failed") {
-      pollRef.current = setTimeout(poll, 1500);
+      if (runRow.status !== "success" && runRow.status !== "failed") {
+        pollRef.current = setTimeout(poll, 1500);
+      }
+    } catch {
+      // Transient network error — keep polling rather than killing the page.
+      pollRef.current = setTimeout(poll, 3000);
     }
   }, [runId]);
 

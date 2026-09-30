@@ -44,7 +44,7 @@ export default async function DashboardPage() {
       if (error || !newProfile) {
         console.error("Profile creation error:", error);
         return (
-          <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
+          <div className="flex min-h-screen items-center justify-center bg-[#070b1a]">
             <div className="text-center">
               <p className="text-red-400 mb-2">Failed to create profile.</p>
               <p className="text-sm text-[#7b80a0]">{error?.message || "Unknown error"}</p>

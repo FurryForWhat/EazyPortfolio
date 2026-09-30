@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { repoSelections?: string[]; customDomain?: string };
+  let body: { repoSelections?: string[] };
   try {
     body = await req.json();
   } catch {
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { repoSelections, customDomain } = body;
+  const { repoSelections } = body;
 
   if (!repoSelections || repoSelections.length === 0) {
     return NextResponse.json(
@@ -61,7 +61,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Save selected repos
+  // Save the selection as a full snapshot, not an append-only list: repos
+  // currently checked are upserted with included=true, and every other row
+  // this profile ever wrote is flipped to included=false. Without the second
+  // half, unchecking a repo never reached the database and the project stayed
+  // on the public portfolio forever (issue #1).
+  const selectedSet = new Set(repoSelections);
   for (const repo of repoSelections) {
     const [owner, name] = repo.split("/");
     if (!owner || !name) continue;
@@ -77,16 +82,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Handle custom domain if provided
-  if (customDomain) {
-    await supabase.from("custom_domains").upsert(
-      {
-        profile_id: profile.id,
-        domain: customDomain,
-        verified: false,
-      },
-      { onConflict: "domain" }
-    );
+  const { data: previouslyIncluded } = await supabase
+    .from("selected_repos")
+    .select("github_repo")
+    .eq("profile_id", profile.id)
+    .eq("included", true);
+
+  const deselected = (previouslyIncluded ?? [])
+    .map((r) => r.github_repo)
+    .filter((repo) => !selectedSet.has(repo));
+
+  if (deselected.length > 0) {
+    const { error: deselectError } = await supabase
+      .from("selected_repos")
+      .update({ included: false })
+      .eq("profile_id", profile.id)
+      .in("github_repo", deselected);
+    if (deselectError) {
+      return NextResponse.json(
+        { error: "Failed to update repo selection", detail: deselectError.message },
+        { status: 500 }
+      );
+    }
   }
 
   // Create the run row up-front so the browser can navigate to

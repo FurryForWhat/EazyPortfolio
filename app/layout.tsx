@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/globals.css";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "EazyPortfolio — Auto-generate your portfolio from GitHub",
@@ -18,6 +19,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#070b1a] text-[#e8eaf0] antialiased">
         {children}
         <Toaster position="top-right" />
+        {/* Vercel Web Analytics — pageview counts only, no cookies/consent banner */}
+        <Analytics />
       </body>
     </html>
   );

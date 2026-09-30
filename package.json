@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "generate": "node pipeline/index.mjs"
+    "generate": "node pipeline/index.mjs",
+    "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^2.0.1",
     "dotenv": "^17.4.2",
     "lucide-react": "^0.476.0",
     "next": "^15.2.0",
@@ -27,6 +29,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
   },
