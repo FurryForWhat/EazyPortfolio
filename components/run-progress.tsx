@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/date";
+
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending: { label: "Queued...", color: "text-[#7b80a0]" },
   fetching: { label: "Fetching commit history...", color: "text-[#4f6ef6]" },
@@ -153,8 +155,8 @@ export default function RunProgress({ run, allRepos, completedRepos }: RunProgre
 
       {/* Timestamps */}
       <div className="space-y-1 text-center text-xs text-[#7b80a0]">
-        {run.started_at && <p>Started: {new Date(run.started_at).toLocaleString()}</p>}
-        {run.finished_at && <p>Finished: {new Date(run.finished_at).toLocaleString()}</p>}
+        {run.started_at && <p>Started: {formatDateTime(run.started_at)}</p>}
+        {run.finished_at && <p>Finished: {formatDateTime(run.finished_at)}</p>}
       </div>
     </div>
   );

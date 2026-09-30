@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "@/lib/date";
+
 const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
   in_progress: { bg: "bg-blue-950/50", text: "text-blue-400", label: "In Progress" },
   completed: { bg: "bg-green-950/50", text: "text-green-400", label: "Completed" },
@@ -110,13 +112,7 @@ export default function PortfolioCard({ project }: { project: ProjectData }) {
       <div className="px-6 py-4 border-t border-[#1a1f3a] flex items-center justify-between">
         <span className="text-xs text-[#7b80a0]">
           Updated{" "}
-          {project.last_updated
-            ? new Date(project.last_updated as string).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : "recently"}
+          {project.last_updated ? formatDate(project.last_updated as string) : "recently"}
         </span>
         {project.demo_url && (
           <a

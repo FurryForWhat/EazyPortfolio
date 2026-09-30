@@ -81,9 +81,10 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 
 const session = await signIn();
+const cookieDomain = new URL(BASE).hostname;
 for (const chunk of session.chunks) {
   await context.addCookies([
-    { name: chunk.name, value: chunk.value, domain: "localhost", path: "/", sameSite: "Lax" },
+    { name: chunk.name, value: chunk.value, domain: cookieDomain, path: "/", sameSite: "Lax" },
   ]);
 }
 
