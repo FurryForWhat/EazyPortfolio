@@ -1,30 +1,86 @@
 # EazyPortfolio
 
-An AI agent pipeline that reads your GitHub commit history and auto-generates a portfolio of case-study-style project cards — no manual write-ups, no copy-paste, no README paraphrasing.
+**Your GitHub commits, your portfolio.** Sign in with GitHub, pick the repos you want to
+showcase, and get a live portfolio page at `/{username}` — each project card written from
+your actual commit history, never from README paraphrasing.
+
+**Live:** https://eazy-portfolio-eight.vercel.app
+
+![Landing page](screenshots/01-landing-desktop.png)
 
 ## What it does
 
-Connect your GitHub account, pick a few repos, and EazyPortfolio produces a structured portfolio where each project answers two questions: **what went wrong** and **how you fixed it** — backed by actual commit evidence, not guesswork.
+1. **Sign in** with GitHub OAuth (Supabase Auth).
+2. **Pick repos** on the dashboard — the list comes straight from your GitHub account.
+3. **Generate**: a serverless run fetches commit hotspots over the GitHub REST API, asks an
+   LLM to reason about them, validates the result, and publishes it to Supabase.
+4. **Share** `/{username}` — a public, responsive page with a challenge/resolution card per
+   project, plus a JSON feed at `/api/export/{username}`.
 
-The pipeline has three stages:
+| Portfolio page | Generation progress |
+| --- | --- |
+| ![Portfolio page](screenshots/02-portfolio-desktop.png) | ![Generation progress](screenshots/04-progress-desktop.png) |
 
-1. **Fetcher** — pulls a repo's commit history via the GitHub API, finds the top commit hotspots (most-changed files), and extracts their full commit message history
-2. **Analyzer** — calls an LLM (Qwen via DashScope, or Anthropic) to reason about the evidence and produce one structured entry per repo: problem solved, how it was solved, tech stack, status
-3. **Publisher** — writes the entry to Supabase, tied to the user's account
+| Dashboard (repo picker) | Mobile |
+| --- | --- |
+| ![Dashboard](screenshots/03-dashboard-desktop.png) | ![Mobile portfolio](screenshots/06-portfolio-mobile.png) |
 
 ## Architecture
 
-- `app/`, `components/`, `lib/` — Next.js app: GitHub OAuth login, a dashboard to pick repos and trigger generation, and a public `/[username]` portfolio page per user. Route handlers live in `app/api/*` (data endpoints) and `app/auth/callback` (OAuth exchange)
-- `pipeline/` — the fetch → analyze → publish logic, callable either as `orchestrate()` (used by `app/api/sync`, writes to Supabase) or as a CLI (`node pipeline/index.mjs owner/repo`, writes to a local JSON file for testing)
-- `supabase/migrations/` — database schema: `profiles`, `selected_repos`, `runs`, `project_entries`, `custom_domains`, with row-level security so each user only sees their own data
+| Path | Role |
+| --- | --- |
+| `app/` | Next.js App Router — pages (`/`, `/dashboard`, `/generate/[runId]`, `/[username]`) and route handlers (`app/api/*`) |
+| `components/` | Client components — repo picker, progress tracker, portfolio card |
+| `lib/` | Supabase clients (anon/service-role/SSR), portfolio data access, date helpers |
+| `pipeline/` | Framework-agnostic core: `fetcher.mjs` → `analyzer.mjs` → `validate.mjs` → `publisher.mjs`, orchestrated by `index.mjs` |
+| `supabase/migrations/` | Postgres schema + row-level security |
+| `tests/e2e.mjs` | Playwright end-to-end test |
 
-## Setup
+Data flow:
 
-1. Create a Supabase project, run the files in `supabase/migrations/` in order (001 → 003) in the SQL Editor
-2. Enable GitHub as an auth provider in Supabase (Authentication → Providers)
-3. Copy `.env.example` to `.env.local` and fill in your Supabase, GitHub, and model API keys
-4. `npm install && npm run dev`
+```
+GitHub OAuth → profile row (Supabase)
+  → POST /api/sync  (snapshot of selected repos → runs row)
+  → fetch (GitHub REST) → analyze (LLM) → validate → publish (Supabase)
+  → GET /api/status/{runId}  (polled by the progress page; stale runs are reaped)
+  → rendered at /{username} and /api/export/{username}
+```
 
-## Legacy
+## Local development
 
-`legacy/` holds the original single-user version of this project: a Claude Code Skills/Subagents pipeline (`.claude/`) that cloned repos locally and git-pushed a static `projects.json` to a personal portfolio site. It's kept for reference but is no longer the active architecture.
+```bash
+npm install
+cp .env.example .env.local     # fill in Supabase, GITHUB_TOKEN, ANTHROPIC_*
+npx supabase start             # optional: local Supabase
+npm run dev                    # http://localhost:3000
+```
+
+Env vars are listed in `.env.example`; `next.config.ts` fails a production build with the
+exact list of missing build-critical keys instead of a cryptic runtime error.
+
+## Testing
+
+```bash
+npx tsc --noEmit        # type check
+npm run build           # production build
+E2E_EMAIL=... E2E_PASSWORD=... E2E_EXPORT_USERNAME=... npm run test:e2e
+```
+
+`tests/e2e.mjs` (Playwright, headless Chromium) signs the test user in against Supabase,
+then exercises the real app: repo selection + sync, progress polling to a terminal run
+state, the public portfolio page, the JSON export, deselected-repo exclusion, stale-run
+reaping, and a console-error check on every page. Point it at the deployment with
+`E2E_BASE_URL=https://eazy-portfolio-eight.vercel.app`.
+
+Screenshots and the console audit were captured with the Chrome DevTools MCP at fixed
+viewports — 1280×800 desktop and 390×844 mobile (all seven live in `screenshots/`).
+
+## Analytics
+
+[Vercel Web Analytics](https://vercel.com/docs/web-analytics) (`@vercel/analytics`),
+rendered in `app/layout.tsx`. Page views only, no cookies, no third-party identifiers —
+the `_vercel/insights/script.js` beacon is served from the same origin.
+
+## License
+
+[MIT](LICENSE)
